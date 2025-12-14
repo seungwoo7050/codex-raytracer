@@ -1,7 +1,7 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 빌드·테스트·렌더 실행까지 재현하는 가이드다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다.
 
 > 주의: 렌더 산출물(PPM/PNG)은 **커밋하지 않는다**(gitignore).
 
@@ -10,35 +10,23 @@
 ## 요구 사항
 - CMake 3.20+
 - C++17 컴파일러 (GCC/Clang)
-- (테스트) GoogleTest는 CMake에서 FetchContent 또는 서브모듈 등 텍스트 방식으로 구성(프로젝트 정책에 따름)
+- 인터넷(테스트용 GoogleTest FetchContent)
 
 ---
 
-## 빌드
+## 빌드 (1줄)
 ```bash
-mkdir -p build
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 ```
 
----
-
-## 테스트 실행
+## 테스트 (1줄)
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
----
-
-## 실행(렌더)
-기본 실행(예시):
+## 실행 (1줄)
 ```bash
-./build/raytracer > output.ppm
-```
-
-(선택) 출력 파일 지정 옵션이 있는 경우:
-```bash
-./build/raytracer --output output.ppm
+./build/raytracer --width 256 --height 256 > output.ppm
 ```
 
 ---

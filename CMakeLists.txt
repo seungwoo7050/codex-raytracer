@@ -11,6 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_executable(raytracer
     src/main.cpp
     src/ppm.cpp
+    src/sphere.cpp
 )
 
 target_include_directories(raytracer PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -30,6 +31,8 @@ include(GoogleTest)
 
 add_executable(unit_tests
     tests/unit/vec3_test.cpp
+    tests/unit/sphere_test.cpp
+    src/sphere.cpp
 )
 
 target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -40,6 +43,7 @@ gtest_discover_tests(unit_tests)
 add_executable(integration_tests
     tests/integration/ppm_integration_test.cpp
     src/ppm.cpp
+    src/sphere.cpp
 )
 
 target_include_directories(integration_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)

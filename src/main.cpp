@@ -1,7 +1,7 @@
 /*
- * 설명: CLI 인자를 해석해 결정적인 그라디언트 PPM을 생성하고 출력한다.
- * 버전: v0.1.0
- * 관련 문서: design/protocol/contract.md
+ * 설명: CLI 인자를 해석해 구 노멀 기반 PPM을 결정적으로 생성하고 출력한다.
+ * 버전: v0.2.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.2.0-sphere-hit.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include <fstream>
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
         return parse_result;
     }
 
-    const std::string image = raytracer::GenerateGradientImage(options);
+    const std::string image = raytracer::RenderSphereNormalImage(options);
 
     if (output_path == "-") {
         std::cout << image;

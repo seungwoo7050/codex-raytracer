@@ -2,7 +2,7 @@
 
 #include "raytracer/ppm.hpp"
 
-TEST(PpmIntegrationTest, GeneratesExpectedGradient) {
+TEST(PpmIntegrationTest, GeneratesExpectedSphereNormals) {
     raytracer::RenderOptions options;
     options.width = 4;
     options.height = 2;
@@ -11,16 +11,16 @@ TEST(PpmIntegrationTest, GeneratesExpectedGradient) {
         "P3\n"
         "4 2\n"
         "255\n"
-        "0 255 128\n"
-        "85 255 128\n"
-        "170 255 128\n"
-        "255 255 128\n"
-        "0 0 128\n"
-        "85 0 128\n"
-        "170 0 128\n"
-        "255 0 128\n";
+        "165 201 255\n"
+        "150 192 255\n"
+        "150 192 255\n"
+        "165 201 255\n"
+        "217 232 255\n"
+        "232 241 255\n"
+        "232 241 255\n"
+        "217 232 255\n";
 
-    const std::string actual = raytracer::GenerateGradientImage(options);
+    const std::string actual = raytracer::RenderSphereNormalImage(options);
 
     EXPECT_EQ(actual, expected);
 }

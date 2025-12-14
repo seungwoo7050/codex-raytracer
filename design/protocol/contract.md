@@ -1,11 +1,11 @@
 # design/protocol/contract.md
 
 ## 목적
-v0.1.0에서 외부와 맞닿는 최소 인터페이스를 고정한다. CLI 옵션, PPM 출력 형식, 결정성 규칙을 본 문서에 정의하며 구현과 테스트는 본 규약을 기준으로 한다.
+v0.2.0에서 외부와 맞닿는 인터페이스를 고정한다. CLI 옵션, PPM 출력 형식, 결정성 규칙을 본 문서에 정의하며 구현과 테스트는 본 규약을 기준으로 한다.
 
 ## 대상 버전
-- 버전: v0.1.0
-- 범위: 기본 그라디언트 PPM 생성 CLI
+- 버전: v0.2.0
+- 범위: 구(원점 기준 앞방향) 노멀 기반 색상 이미지 생성 CLI
 
 ## CLI 규약
 - 실행 파일: `raytracer`
@@ -29,18 +29,34 @@ v0.1.0에서 외부와 맞닿는 최소 인터페이스를 고정한다. CLI 옵
   - 각 픽셀은 `R G B` 세 값으로 이루어진 한 줄로 기록하며, 값 사이에는 공백 하나만 둔다.
   - 모든 줄 끝에는 개행(\n)을 넣는다. 마지막 픽셀 뒤에도 개행을 유지한다.
 - 색상 생성 규칙(결정적):
-  - 좌표 `(x, y)`에서 `x`는 0..(width-1), `y`는 0..(height-1)로 두며 `y=0`이 상단이다.
-  - 정규화 좌표:
-    - `width > 1`이면 `u = x / (width - 1)`, `width == 1`이면 `u = 0`.
-    - `height > 1`이면 `v = y / (height - 1)`, `height == 1`이면 `v = 0`.
+  - 카메라
+    - 원점(origin): `(0, 0, 0)`
+    - 초점 거리(focal length): `1.0`
+    - 뷰포트 높이: `2.0`
+    - 뷰포트 너비: `2.0 * (width / height)`
+    - 수평 벡터: `(viewport_width, 0, 0)`
+    - 수직 벡터: `(0, viewport_height, 0)`
+    - 좌하단 코너: `origin - horizontal/2 - vertical/2 - (0, 0, focal_length)`
+  - 레이 생성(픽셀 좌표 `(x, y)`, `y=0` 상단):
+    - 정규화 좌표: `u = (width == 1) ? 0 : x / (width - 1)`, `v = (height == 1) ? 0 : (height - 1 - y) / (height - 1)`
+    - 방향: `dir = lower_left_corner + u * horizontal + v * vertical - origin`
+    - 레이: `r(t) = origin + t * dir`
+  - 장면: 중심 `(0, 0, -1)`, 반지름 `0.5`인 구 1개
+  - 구 교차 테스트:
+    - `dot(dir, dir) * t^2 + 2 * dot(oc, dir) * t + dot(oc, oc) - r^2 = 0` (단, `oc = origin - center`)
+    - 근 판별식 `discriminant = b^2 - a*c` (여기서 `a = dot(dir, dir)`, `b = dot(oc, dir)`, `c = dot(oc, oc) - r^2`)
+    - `discriminant < 0`이면 미교차, 배경색 사용
+    - `discriminant >= 0`이면 `(-b - sqrt(discriminant)) / a`, 필요 시 `(-b + sqrt(discriminant)) / a` 중 `t > 0`이며 가장 작은 값을 채택한다.
+    - 교차점 `p = r(t)`에서 법선 `n = (p - center) / r`
+    - 레이 방향과 법선 내적이 양수이면 내부에서 나간 것으로 간주하고 `n = -n`으로 정규화한 뒤 색을 계산한다.
   - 색상 구성:
-    - `R = round(255 * u)`
-    - `G = round(255 * (1 - v))`
-    - `B = 128` (고정)
-  - `round`는 표준 반올림(`std::lround`)을 사용하며, 결과는 0..255 범위로 클램프한다.
+    - 구에 맞으면 `c = 0.5 * (n + (1,1,1))` (각 성분 0..1 범위)
+    - 미교차 시 배경: `unit_dir = dir / |dir|`, `t = 0.5 * (unit_dir.y + 1.0)`, `c = (1.0 - t) * (1,1,1) + t * (0.5, 0.7, 1.0)`
+    - 최종 채널 값: `channel = round(255 * clamp(c, 0, 0.999))`
+    - `round`는 `std::lround`, `clamp`는 [0, 0.999] 구간에 제한한다.
 
 ## 결정성 규칙
-- 본 버전에서는 RNG를 사용하지 않는다.
+- RNG 미사용.
 - 동일한 입력(옵션, 해상도)에서는 항상 동일한 PPM 문자열을 생성한다.
 - 테스트는 정확한 문자열 비교를 기반으로 한다.
 

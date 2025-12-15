@@ -1,8 +1,8 @@
 /*
- * 설명: 표면 재질을 정의하고 반사/굴절 산란을 계산한다.
- * 버전: v0.5.0
- * 관련 문서: design/renderer/v0.5.0-blur.md
- * 테스트: tests/unit/material_scatter_test.cpp
+ * 설명: 표면 재질을 정의하고 텍스처 기반 반사/굴절 산란을 계산한다.
+ * 버전: v0.7.0
+ * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md
+ * 테스트: tests/unit/material_scatter_test.cpp, tests/unit/texture_test.cpp
  */
 #pragma once
 
@@ -13,6 +13,7 @@
 #include "raytracer/hittable.hpp"
 #include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
+#include "raytracer/texture.hpp"
 #include "raytracer/vec3.hpp"
 
 namespace raytracer {
@@ -26,7 +27,8 @@ public:
 
 class Lambertian : public Material {
 public:
-    explicit Lambertian(const Color& albedo) : albedo_(albedo) {}
+    explicit Lambertian(const Color& albedo) : albedo_(std::make_shared<SolidColor>(albedo)) {}
+    explicit Lambertian(std::shared_ptr<Texture> texture) : albedo_(std::move(texture)) {}
 
     bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
                  std::mt19937& generator) const override {
@@ -36,12 +38,12 @@ public:
         }
 
         scattered = Ray(record.p, scatter_direction, r_in.time());
-        attenuation = albedo_;
+        attenuation = albedo_->Value(record.u, record.v, record.p);
         return true;
     }
 
 private:
-    Color albedo_;
+    std::shared_ptr<Texture> albedo_;
 };
 
 class Metal : public Material {

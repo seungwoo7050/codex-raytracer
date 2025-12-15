@@ -1,8 +1,8 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.6.0에서는 AABB와 BVH로 장면을 가속하며 defocus blur 카메라와 셔터
-시간에 따라 움직이는 구를 포함한 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.7.0에서는 AABB와 BVH로 장면을 가속하며 체커/노이즈 텍스처가 적용된
+defocus blur 카메라 장면을 결정적으로 렌더링한다.
 
 > 주의: 렌더 산출물(PPM/PNG)과 벤치마크 결과는 **커밋하지 않는다**(gitignore).
 

@@ -1,7 +1,7 @@
 /*
  * 설명: 고정 구와 시간에 따라 이동하는 구의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.7.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once

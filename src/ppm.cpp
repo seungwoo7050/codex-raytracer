@@ -1,7 +1,7 @@
 /*
- * 설명: defocus blur와 motion blur가 적용된 Lambertian/Metal/Dielectric 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
- * 버전: v0.6.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md
+ * 설명: 텍스처가 적용된 defocus blur와 motion blur 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
+ * 버전: v0.7.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -20,6 +20,7 @@
 #include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
 #include "raytracer/sphere.hpp"
+#include "raytracer/texture.hpp"
 #include "raytracer/vec3.hpp"
 
 namespace raytracer {
@@ -63,8 +64,10 @@ void WriteColor(std::ostringstream& output, const Color& pixel_color) {
 HittableList BuildScene() {
     HittableList world;
 
-    const auto ground_material = std::make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-    const auto center_material = std::make_shared<Lambertian>(Color(0.1, 0.2, 0.5));
+    const auto checker_texture = std::make_shared<CheckerTexture>(Color(0.8, 0.8, 0.0), Color(0.2, 0.3, 0.1), 3.0);
+    const auto noise_texture = std::make_shared<NoiseTexture>(2.0);
+    const auto ground_material = std::make_shared<Lambertian>(checker_texture);
+    const auto center_material = std::make_shared<Lambertian>(noise_texture);
     const auto left_material = std::make_shared<Dielectric>(1.5);
     const auto right_material = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0.0);
 

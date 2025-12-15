@@ -1,7 +1,7 @@
 /*
  * 설명: 고정 구와 이동 구의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.7.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #include "raytracer/sphere.hpp"
@@ -9,6 +9,18 @@
 #include <cmath>
 
 namespace raytracer {
+
+namespace {
+
+void GetSphereUv(const Point3& p, double& u, double& v) {
+    const double theta = std::acos(-p.y());
+    const double phi = std::atan2(-p.z(), p.x()) + std::acos(-1.0);
+    const double pi = std::acos(-1.0);
+    u = phi / (2.0 * pi);
+    v = theta / pi;
+}
+
+}  // namespace
 
 bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
     const Vec3 oc = r.origin() - center_;
@@ -34,6 +46,7 @@ bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) co
     record.t = root;
     record.p = r.At(record.t);
     const Vec3 outward_normal = (record.p - center_) / radius_;
+    GetSphereUv(outward_normal, record.u, record.v);
     record.SetFaceNormal(r, outward_normal);
     record.material = material_;
 
@@ -81,6 +94,7 @@ bool MovingSphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& reco
     record.t = root;
     record.p = r.At(record.t);
     const Vec3 outward_normal = (record.p - center) / radius_;
+    GetSphereUv(outward_normal, record.u, record.v);
     record.SetFaceNormal(r, outward_normal);
     record.material = material_;
 

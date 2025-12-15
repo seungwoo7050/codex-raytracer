@@ -72,7 +72,7 @@ ray-tracer (C++17 CPU 레이트레이서) 버전 로드맵.
   - BVH hit 단위 테스트
 
 ### v0.7.0 — 텍스처: Checker/Noise/Image
-- 상태: ⬜
+- 상태: 🟨
 - 목표:
   - Solid/Checker/Perlin noise
   - (선택) stb_image로 이미지 텍스처 로딩

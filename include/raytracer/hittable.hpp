@@ -1,7 +1,7 @@
 /*
  * 설명: 레이와 물체의 교차 정보를 표현하고 경계 상자를 포함한 추상 인터페이스를 정의한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.7.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once
@@ -20,6 +20,8 @@ struct HitRecord {
     Vec3 normal;
     double t = 0.0;
     bool front_face = true;
+    double u = 0.0;
+    double v = 0.0;
     std::shared_ptr<Material> material;
 
     void SetFaceNormal(const Ray& r, const Vec3& outward_normal) {

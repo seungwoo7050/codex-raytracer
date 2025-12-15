@@ -35,6 +35,7 @@ add_executable(unit_tests
     tests/unit/sphere_test.cpp
     tests/unit/material_scatter_test.cpp
     tests/unit/bvh_test.cpp
+    tests/unit/texture_test.cpp
     src/sphere.cpp
     src/bvh.cpp
 )

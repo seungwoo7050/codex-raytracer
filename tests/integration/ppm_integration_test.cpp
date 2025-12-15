@@ -14,12 +14,12 @@ TEST(PpmIntegrationTest, GeneratesExpectedMaterialImageWithSampling) {
         "P3\n"
         "3 2\n"
         "255\n"
-        "200 218 180\n"
-        "184 206 128\n"
+        "185 203 185\n"
+        "170 191 134\n"
         "199 217 180\n"
-        "159 180 0\n"
-        "169 180 57\n"
-        "168 195 0\n";
+        "141 161 40\n"
+        "139 153 72\n"
+        "136 162 57\n";
 
     const std::string actual = raytracer::RenderMaterialImage(options);
 

@@ -1,11 +1,15 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
+#include "raytracer/material.hpp"
 #include "raytracer/ray.hpp"
 #include "raytracer/sphere.hpp"
 #include "raytracer/vec3.hpp"
 
 TEST(SphereTest, HitsCenteredSphereFromFront) {
-    raytracer::Sphere sphere(raytracer::Point3(0.0, 0.0, -1.0), 0.5);
+    auto material = std::make_shared<raytracer::Lambertian>(raytracer::Color(1.0, 1.0, 1.0));
+    raytracer::Sphere sphere(raytracer::Point3(0.0, 0.0, -1.0), 0.5, material);
     raytracer::Ray ray(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0));
 
     raytracer::HitRecord record;
@@ -23,7 +27,8 @@ TEST(SphereTest, HitsCenteredSphereFromFront) {
 }
 
 TEST(SphereTest, MissesWhenRaySkimsPast) {
-    raytracer::Sphere sphere(raytracer::Point3(0.0, 0.0, -1.0), 0.5);
+    auto material = std::make_shared<raytracer::Lambertian>(raytracer::Color(1.0, 1.0, 1.0));
+    raytracer::Sphere sphere(raytracer::Point3(0.0, 0.0, -1.0), 0.5, material);
     raytracer::Ray ray(raytracer::Point3(0.0, 1.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0));
 
     raytracer::HitRecord record;

@@ -1,7 +1,7 @@
 /*
- * 설명: CLI 인자를 해석해 구 노멀 기반 PPM을 결정적으로 생성하고 출력한다.
- * 버전: v0.3.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.3.0-camera-sampling.md
+ * 설명: CLI 인자를 해석해 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
+ * 버전: v0.4.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.4.0-materials.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include <cstdint>
@@ -60,6 +60,17 @@ int ParseOptions(int argc, char* argv[], raytracer::RenderOptions& options, std:
                 std::cerr << "오류: --spp 값은 정수여야 한다." << std::endl;
                 return 1;
             }
+        } else if (arg == "--max-depth") {
+            if (!HasNext(argc, i)) {
+                std::cerr << "오류: --max-depth 옵션에 값이 필요하다." << std::endl;
+                return 1;
+            }
+            try {
+                options.max_depth = std::stoi(argv[++i]);
+            } catch (const std::exception&) {
+                std::cerr << "오류: --max-depth 값은 정수여야 한다." << std::endl;
+                return 1;
+            }
         } else if (arg == "--seed") {
             if (!HasNext(argc, i)) {
                 std::cerr << "오류: --seed 옵션에 값이 필요하다." << std::endl;
@@ -92,6 +103,11 @@ int ParseOptions(int argc, char* argv[], raytracer::RenderOptions& options, std:
         return 1;
     }
 
+    if (options.max_depth < 1) {
+        std::cerr << "오류: --max-depth 값은 1 이상 정수여야 한다." << std::endl;
+        return 1;
+    }
+
     return 0;
 }
 
@@ -106,7 +122,7 @@ int main(int argc, char* argv[]) {
         return parse_result;
     }
 
-    const std::string image = raytracer::RenderSphereNormalImage(options);
+    const std::string image = raytracer::RenderMaterialImage(options);
 
     if (output_path == "-") {
         std::cout << image;

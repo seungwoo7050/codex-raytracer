@@ -47,7 +47,7 @@ ray-tracer (C++17 CPU 레이트레이서) 버전 로드맵.
   - 고정 seed로 동일 PPM 재현
 
 ### v0.4.0 — 재질 1차: Lambertian/Metal/Dielectric + 재귀 깊이
-- 상태: ⬜
+- 상태: 🟨
 - 목표:
   - 재귀 rayColor + maxDepth
   - Lambertian/Metal/Dielectric

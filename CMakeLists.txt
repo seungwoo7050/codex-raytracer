@@ -32,6 +32,7 @@ include(GoogleTest)
 add_executable(unit_tests
     tests/unit/vec3_test.cpp
     tests/unit/sphere_test.cpp
+    tests/unit/material_scatter_test.cpp
     src/sphere.cpp
 )
 

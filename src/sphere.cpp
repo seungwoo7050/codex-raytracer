@@ -1,7 +1,7 @@
 /*
  * 설명: 구와 레이의 교차를 계산한다.
- * 버전: v0.2.0
- * 관련 문서: design/renderer/v0.2.0-sphere-hit.md
+ * 버전: v0.4.0
+ * 관련 문서: design/renderer/v0.4.0-materials.md
  * 테스트: tests/unit/sphere_test.cpp
  */
 #include "raytracer/sphere.hpp"
@@ -35,6 +35,7 @@ bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) co
     record.p = r.At(record.t);
     const Vec3 outward_normal = (record.p - center_) / radius_;
     record.SetFaceNormal(r, outward_normal);
+    record.material = material_;
 
     return true;
 }

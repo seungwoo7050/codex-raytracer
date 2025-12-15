@@ -1,7 +1,7 @@
 /*
  * 설명: 3차원 벡터를 표현하고 기하 연산을 제공한다.
- * 버전: v0.2.0
- * 관련 문서: design/renderer/v0.2.0-sphere-hit.md
+ * 버전: v0.4.0
+ * 관련 문서: design/renderer/v0.4.0-materials.md
  * 테스트: tests/unit/vec3_test.cpp
  */
 #pragma once
@@ -40,6 +40,11 @@ public:
     double length() const { return std::sqrt(length_squared()); }
     double length_squared() const { return e[0] * e[0] + e[1] * e[1] + e[2] * e[2]; }
 
+    bool NearZero() const {
+        constexpr double kEpsilon = 1e-8;
+        return (std::fabs(e[0]) < kEpsilon) && (std::fabs(e[1]) < kEpsilon) && (std::fabs(e[2]) < kEpsilon);
+    }
+
     double operator[](int i) const { return e[i]; }
 
 private:
@@ -75,5 +80,14 @@ inline Vec3 Cross(const Vec3& u, const Vec3& v) {
 }
 
 inline Vec3 UnitVector(const Vec3& v) { return v / v.length(); }
+
+inline Vec3 Reflect(const Vec3& v, const Vec3& n) { return v - 2.0 * Dot(v, n) * n; }
+
+inline Vec3 Refract(const Vec3& uv, const Vec3& n, double etai_over_etat) {
+    const double cos_theta = std::fmin(Dot(-uv, n), 1.0);
+    const Vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    const Vec3 r_out_parallel = -std::sqrt(std::fabs(1.0 - r_out_perp.length_squared())) * n;
+    return r_out_perp + r_out_parallel;
+}
 
 }  // namespace raytracer

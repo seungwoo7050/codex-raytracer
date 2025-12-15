@@ -1,7 +1,7 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.3.0에서는 카메라 FOV/종횡비와 멀티샘플링을 사용해 단일 구의 노멀을 색상으로 표현한 이미지를 결정적으로 렌더링한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.4.0에서는 Lambertian/Metal/Dielectric 재질과 재귀 rayColor, 감마 보정을 적용한 4개 구 장면을 결정적으로 렌더링한다.
 
 > 주의: 렌더 산출물(PPM/PNG)은 **커밋하지 않는다**(gitignore).
 
@@ -26,7 +26,7 @@ ctest --test-dir build --output-on-failure
 
 ## 실행 (1줄)
 ```bash
-./build/raytracer --width 256 --height 256 --spp 10 --seed 1 > output.ppm
+./build/raytracer --width 256 --height 256 --spp 10 --max-depth 10 --seed 1 > output.ppm
 ```
 
 ---

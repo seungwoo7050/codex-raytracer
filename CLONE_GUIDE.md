@@ -1,8 +1,8 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.8.0에서는 Quad/Box/area light로 구성된 Cornell Box를 BVH로 가속해 결정적으로
-렌더링하며 Translate/RotateY 변환과 발광 재질을 포함한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.9.0에서는 Cornell Box 내부에 두 개의 ConstantMedium 볼륨을 배치한 Cornell smoke
+장면을 BVH로 가속해 결정적으로 렌더링하며 Translate/RotateY 변환과 발광 재질, Isotropic 위상 함수를 포함한다.
 
 > 주의: 렌더 산출물(PPM/PNG)과 벤치마크 결과는 **커밋하지 않는다**(gitignore).
 

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <random>
 
 #include "raytracer/material.hpp"
 #include "raytracer/ray.hpp"
@@ -13,7 +14,8 @@ TEST(SphereTest, HitsCenteredSphereFromFront) {
     raytracer::Ray ray(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0));
 
     raytracer::HitRecord record;
-    const bool hit = sphere.Hit(ray, 0.001, 100.0, record);
+    std::mt19937 generator(1);
+    const bool hit = sphere.Hit(ray, 0.001, 100.0, record, generator);
 
     EXPECT_TRUE(hit);
     EXPECT_NEAR(record.t, 0.5, 1e-9);
@@ -32,7 +34,8 @@ TEST(SphereTest, MissesWhenRaySkimsPast) {
     raytracer::Ray ray(raytracer::Point3(0.0, 1.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0));
 
     raytracer::HitRecord record;
-    const bool hit = sphere.Hit(ray, 0.001, 100.0, record);
+    std::mt19937 generator(1);
+    const bool hit = sphere.Hit(ray, 0.001, 100.0, record, generator);
 
     EXPECT_FALSE(hit);
 }
@@ -44,13 +47,14 @@ TEST(SphereTest, MovingSphereTracksRayTime) {
 
     raytracer::Ray ray_start(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0), 0.0);
     raytracer::HitRecord record_start;
-    ASSERT_TRUE(sphere.Hit(ray_start, 0.001, 100.0, record_start));
+    std::mt19937 generator(2);
+    ASSERT_TRUE(sphere.Hit(ray_start, 0.001, 100.0, record_start, generator));
     const raytracer::Point3 estimated_center_start = record_start.p - 0.5 * record_start.normal;
     EXPECT_NEAR(estimated_center_start.y(), 0.0, 1e-6);
 
     raytracer::Ray ray_end(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0), 1.0);
     raytracer::HitRecord record_end;
-    ASSERT_TRUE(sphere.Hit(ray_end, 0.001, 100.0, record_end));
+    ASSERT_TRUE(sphere.Hit(ray_end, 0.001, 100.0, record_end, generator));
     const raytracer::Point3 estimated_center_end = record_end.p - 0.5 * record_end.normal;
     EXPECT_NEAR(estimated_center_end.y(), -0.25, 1e-6);
 }

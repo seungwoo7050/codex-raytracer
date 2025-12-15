@@ -1,7 +1,7 @@
 /*
  * 설명: Quad와 Box의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.8.0
- * 관련 문서: design/renderer/v0.8.0-cornell.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/quad_test.cpp
  */
 #include "raytracer/quad.hpp"
@@ -28,7 +28,7 @@ Quad::Quad(const Point3& q, const Vec3& u, const Vec3& v, std::shared_ptr<Materi
     SetBoundingBox();
 }
 
-bool Quad::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool Quad::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& /*generator*/) const {
     const double denominator = Dot(normal_, r.direction());
     if (std::fabs(denominator) < kEpsilon) {
         return false;
@@ -103,7 +103,9 @@ Box::Box(const Point3& min_point, const Point3& max_point, std::shared_ptr<Mater
                                       Vec3(0.0, 0.0, dz), material));
 }
 
-bool Box::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const { return sides_.Hit(r, t_min, t_max, record); }
+bool Box::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const {
+    return sides_.Hit(r, t_min, t_max, record, generator);
+}
 
 bool Box::BoundingBox(double /*time0*/, double /*time1*/, Aabb& output_box) const {
     output_box = Aabb(min_, max_);

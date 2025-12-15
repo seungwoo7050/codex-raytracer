@@ -1,7 +1,7 @@
 /*
- * 설명: 여러 개의 물체를 순회하며 가장 가까운 교차를 찾고 경계 상자를 제공하는 리스트 래퍼를 제공한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 설명: 여러 개의 물체를 순회하며 RNG를 전달해 가장 가까운 교차를 찾고 경계 상자를 제공하는 리스트 래퍼를 제공한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once
@@ -24,13 +24,13 @@ public:
 
     void Add(std::shared_ptr<Hittable> object) { objects_.push_back(std::move(object)); }
 
-    bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const override {
+    bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const override {
         HitRecord temp_record;
         bool hit_anything = false;
         double closest_so_far = t_max;
 
         for (const auto& object : objects_) {
-            if (object->Hit(r, t_min, closest_so_far, temp_record)) {
+            if (object->Hit(r, t_min, closest_so_far, temp_record, generator)) {
                 hit_anything = true;
                 closest_so_far = temp_record.t;
                 record = temp_record;

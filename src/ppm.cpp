@@ -1,7 +1,7 @@
 /*
- * 설명: Cornell Box Quad/박스/광원을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
- * 버전: v0.8.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md
+ * 설명: Cornell smoke 볼륨 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -15,6 +15,7 @@
 
 #include "raytracer/bvh.hpp"
 #include "raytracer/camera.hpp"
+#include "raytracer/constant_medium.hpp"
 #include "raytracer/hittable_list.hpp"
 #include "raytracer/material.hpp"
 #include "raytracer/quad.hpp"
@@ -39,7 +40,7 @@ Color RayColor(const Ray& r, int depth, const Hittable& world, std::mt19937& gen
     }
 
     HitRecord record;
-    if (!world.Hit(r, 0.001, std::numeric_limits<double>::infinity(), record)) {
+    if (!world.Hit(r, 0.001, std::numeric_limits<double>::infinity(), record, generator)) {
         return Color(0.0, 0.0, 0.0);
     }
 
@@ -63,7 +64,7 @@ void WriteColor(std::ostringstream& output, const Color& pixel_color) {
     output << ir << ' ' << ig << ' ' << ib << "\n";
 }
 
-HittableList BuildCornellBox() {
+HittableList BuildCornellSmoke() {
     HittableList world;
 
     const auto red = std::make_shared<Lambertian>(Color(0.65, 0.05, 0.05));
@@ -81,12 +82,12 @@ HittableList BuildCornellBox() {
     std::shared_ptr<Hittable> short_box = std::make_shared<Box>(Point3(0.0, 0.0, 0.0), Point3(165.0, 165.0, 165.0), white);
     short_box = std::make_shared<RotateY>(short_box, -18.0);
     short_box = std::make_shared<Translate>(short_box, Vec3(130.0, 0.0, 65.0));
-    world.Add(short_box);
+    world.Add(std::make_shared<ConstantMedium>(short_box, 0.01, Color(0.0, 0.0, 0.0)));
 
     std::shared_ptr<Hittable> tall_box = std::make_shared<Box>(Point3(0.0, 0.0, 0.0), Point3(165.0, 330.0, 165.0), white);
     tall_box = std::make_shared<RotateY>(tall_box, 15.0);
     tall_box = std::make_shared<Translate>(tall_box, Vec3(265.0, 0.0, 295.0));
-    world.Add(tall_box);
+    world.Add(std::make_shared<ConstantMedium>(tall_box, 0.01, Color(1.0, 1.0, 1.0)));
 
     return world;
 }
@@ -101,7 +102,7 @@ std::string RenderMaterialImage(const RenderOptions& options) {
     const double focus_dist = (look_from - look_at).length();
     const Camera camera(look_from, look_at, vup, options.vertical_fov_degrees, aspect_ratio, options.aperture, focus_dist,
                        options.shutter_open_time, options.shutter_close_time);
-    HittableList world = BuildCornellBox();
+    HittableList world = BuildCornellSmoke();
     const std::shared_ptr<BvhNode> bvh_tree =
         world.Objects().empty() ? nullptr : std::make_shared<BvhNode>(world, options.shutter_open_time, options.shutter_close_time);
     const Hittable& world_view = bvh_tree ? static_cast<const Hittable&>(*bvh_tree) : static_cast<const Hittable&>(world);

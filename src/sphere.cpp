@@ -1,7 +1,7 @@
 /*
  * 설명: 고정 구와 이동 구의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.7.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #include "raytracer/sphere.hpp"
@@ -22,7 +22,7 @@ void GetSphereUv(const Point3& p, double& u, double& v) {
 
 }  // namespace
 
-bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& /*generator*/) const {
     const Vec3 oc = r.origin() - center_;
     const double a = r.direction().length_squared();
     const double half_b = Dot(oc, r.direction());
@@ -69,7 +69,7 @@ Point3 MovingSphere::Center(double time) const {
     return center_start_ + time_ratio * (center_end_ - center_start_);
 }
 
-bool MovingSphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool MovingSphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& /*generator*/) const {
     const Point3 center = Center(r.time());
     const Vec3 oc = r.origin() - center;
     const double a = r.direction().length_squared();

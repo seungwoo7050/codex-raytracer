@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <random>
 
 #include "raytracer/material.hpp"
 #include "raytracer/quad.hpp"
@@ -14,8 +15,9 @@ TEST(QuadTest, HitInsideQuadReturnsUvAndNormal) {
 
     raytracer::Ray ray(raytracer::Point3(1.0, 1.0, 1.0), raytracer::Vec3(0.0, 0.0, -1.0));
     raytracer::HitRecord record;
+    std::mt19937 generator(1);
 
-    const bool hit = quad.Hit(ray, 0.001, 10.0, record);
+    const bool hit = quad.Hit(ray, 0.001, 10.0, record, generator);
 
     ASSERT_TRUE(hit);
     EXPECT_NEAR(record.t, 1.0, 1e-6);
@@ -36,8 +38,9 @@ TEST(QuadTest, TranslateMovesIntersectionPoint) {
 
     raytracer::Ray ray(raytracer::Point3(0.5, 0.5, 3.0), raytracer::Vec3(0.0, 0.0, -1.0));
     raytracer::HitRecord record;
+    std::mt19937 generator(2);
 
-    const bool hit = translated.Hit(ray, 0.001, 10.0, record);
+    const bool hit = translated.Hit(ray, 0.001, 10.0, record, generator);
 
     ASSERT_TRUE(hit);
     EXPECT_NEAR(record.p.z(), 1.0, 1e-6);

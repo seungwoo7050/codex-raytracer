@@ -1,12 +1,13 @@
 /*
- * 설명: 레이와 물체의 교차 정보를 표현하고 경계 상자를 포함한 추상 인터페이스를 정의한다.
- * 버전: v0.7.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
+ * 설명: 레이와 물체의 교차 정보를 표현하고 RNG를 전달하는 추상 인터페이스를 정의한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once
 
 #include <memory>
+#include <random>
 
 #include "raytracer/aabb.hpp"
 #include "raytracer/ray.hpp"
@@ -33,7 +34,7 @@ struct HitRecord {
 class Hittable {
 public:
     virtual ~Hittable() = default;
-    virtual bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const = 0;
+    virtual bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const = 0;
     virtual bool BoundingBox(double time0, double time1, Aabb& output_box) const = 0;
 };
 

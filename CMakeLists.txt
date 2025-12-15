@@ -11,6 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_executable(raytracer
     src/main.cpp
     src/ppm.cpp
+    src/constant_medium.cpp
     src/sphere.cpp
     src/bvh.cpp
     src/quad.cpp
@@ -39,6 +40,7 @@ add_executable(unit_tests
     tests/unit/bvh_test.cpp
     tests/unit/texture_test.cpp
     tests/unit/quad_test.cpp
+    src/constant_medium.cpp
     src/sphere.cpp
     src/bvh.cpp
     src/quad.cpp
@@ -51,6 +53,7 @@ target_link_libraries(unit_tests PRIVATE GTest::gtest_main)
 add_executable(integration_tests
     tests/integration/ppm_integration_test.cpp
     src/ppm.cpp
+    src/constant_medium.cpp
     src/sphere.cpp
     src/bvh.cpp
     src/quad.cpp

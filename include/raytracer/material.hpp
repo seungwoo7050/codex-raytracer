@@ -1,7 +1,7 @@
 /*
- * 설명: 표면 재질을 정의하고 텍스처 기반 반사/굴절/발광 동작을 계산한다.
- * 버전: v0.8.0
- * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.8.0-cornell.md
+ * 설명: 표면 재질과 볼륨 위상 함수를 정의하고 텍스처 기반 반사/굴절/발광 동작을 계산한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/material_scatter_test.cpp, tests/unit/texture_test.cpp
  */
 #pragma once
@@ -114,6 +114,22 @@ public:
 
 private:
     Color emit_;
+};
+
+class Isotropic : public Material {
+public:
+    explicit Isotropic(const Color& albedo) : albedo_(std::make_shared<SolidColor>(albedo)) {}
+    explicit Isotropic(std::shared_ptr<Texture> texture) : albedo_(std::move(texture)) {}
+
+    bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
+                 std::mt19937& generator) const override {
+        scattered = Ray(record.p, RandomInUnitSphere(generator), r_in.time());
+        attenuation = albedo_->Value(record.u, record.v, record.p);
+        return true;
+    }
+
+private:
+    std::shared_ptr<Texture> albedo_;
 };
 
 }  // namespace raytracer

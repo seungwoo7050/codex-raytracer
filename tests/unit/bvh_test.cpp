@@ -1,13 +1,14 @@
 /*
- * 설명: BVH 트리가 원본 HittableList와 동일한 hit 결과를 반환하는지 검증한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 설명: BVH 트리가 RNG 전달 후에도 원본 HittableList와 동일한 hit 결과를 반환하는지 검증한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/bvh_test.cpp
  */
 #include <gtest/gtest.h>
 
 #include <limits>
 #include <memory>
+#include <random>
 #include <vector>
 
 #include "raytracer/bvh.hpp"
@@ -57,8 +58,11 @@ TEST(BvhTest, MatchesHittableListHits) {
         HitRecord list_record;
         HitRecord bvh_record;
 
-        const bool list_hit = world.Hit(ray, 0.001, Inf(), list_record);
-        const bool bvh_hit = bvh.Hit(ray, 0.001, Inf(), bvh_record);
+        std::mt19937 list_generator(1234);
+        std::mt19937 bvh_generator(1234);
+
+        const bool list_hit = world.Hit(ray, 0.001, Inf(), list_record, list_generator);
+        const bool bvh_hit = bvh.Hit(ray, 0.001, Inf(), bvh_record, bvh_generator);
 
         EXPECT_EQ(list_hit, bvh_hit);
         if (list_hit) {

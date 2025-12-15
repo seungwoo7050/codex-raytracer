@@ -1,10 +1,11 @@
 /*
  * 설명: 동일한 레이 집합에 대해 BVH 사용 전후 hit 시간을 비교해 텍스트로 출력한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
  * 테스트: (수동 실행)
  */
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -66,12 +67,13 @@ std::vector<Ray> GenerateRays(std::mt19937& generator, size_t count) {
     return rays;
 }
 
-Measurement MeasureHits(const Hittable& world, const std::vector<Ray>& rays) {
+Measurement MeasureHits(const Hittable& world, const std::vector<Ray>& rays, std::uint32_t seed) {
     int hits = 0;
+    std::mt19937 generator(seed);
     const auto start = std::chrono::steady_clock::now();
     for (const auto& ray : rays) {
         HitRecord record;
-        if (world.Hit(ray, 0.001, std::numeric_limits<double>::infinity(), record)) {
+        if (world.Hit(ray, 0.001, std::numeric_limits<double>::infinity(), record, generator)) {
             ++hits;
         }
     }
@@ -87,8 +89,8 @@ int main() {
 
     const std::vector<Ray> rays = GenerateRays(generator, 20000);
 
-    const Measurement list_measure = MeasureHits(world, rays);
-    const Measurement bvh_measure = MeasureHits(bvh, rays);
+    const Measurement list_measure = MeasureHits(world, rays, 2025);
+    const Measurement bvh_measure = MeasureHits(bvh, rays, 2025);
 
     std::cout << "샘플 레이 개수: " << rays.size() << "\n";
     std::cout << "리스트 hit 시간(ms): " << list_measure.elapsed.count() << "\n";

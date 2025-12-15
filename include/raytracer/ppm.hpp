@@ -1,7 +1,7 @@
 /*
- * 설명: Cornell smoke 기반 볼륨 장면을 BVH로 가속해 PPM(P3) 규격으로 렌더링한다.
- * 버전: v0.9.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
+ * 설명: Cornell smoke 기반 볼륨 장면을 BVH로 가속하고 PDF 기반 중요도 샘플링을 적용해 PPM(P3) 규격으로 렌더링한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v1.0.0-overview.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #pragma once

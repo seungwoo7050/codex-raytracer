@@ -1,12 +1,13 @@
 /*
- * 설명: 여러 개의 물체를 순회하며 RNG를 전달해 가장 가까운 교차를 찾고 경계 상자를 제공하는 리스트 래퍼를 제공한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
+ * 설명: 여러 개의 물체를 순회하며 RNG를 전달해 가장 가까운 교차를 찾고 PDF 샘플링에 필요한 정보를 제공한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp, tests/unit/pdf_test.cpp
  */
 #pragma once
 
 #include <memory>
+#include <random>
 #include <vector>
 
 #include "raytracer/aabb.hpp"
@@ -60,6 +61,28 @@ public:
     }
 
     const std::vector<std::shared_ptr<Hittable>>& Objects() const { return objects_; }
+
+    double PdfValue(const Point3& origin, const Vec3& direction) const override {
+        if (objects_.empty()) {
+            return 0.0;
+        }
+
+        double sum = 0.0;
+        for (const auto& object : objects_) {
+            sum += object->PdfValue(origin, direction);
+        }
+
+        return sum / static_cast<double>(objects_.size());
+    }
+
+    Vec3 Random(const Point3& origin, std::mt19937& generator) const override {
+        if (objects_.empty()) {
+            return Vec3(1.0, 0.0, 0.0);
+        }
+
+        std::uniform_int_distribution<std::size_t> distribution(0, objects_.size() - 1);
+        return objects_[distribution(generator)]->Random(origin, generator);
+    }
 
 private:
     std::vector<std::shared_ptr<Hittable>> objects_;

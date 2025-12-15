@@ -1,11 +1,11 @@
 # design/protocol/contract.md
 
 ## 목적
-v0.9.0에서 Cornell smoke 장면을 결정적으로 렌더링하는 외부 인터페이스를 고정한다. Quad/Box/변환을 그대로 사용하되 Box를 경계로 하는 ConstantMedium 볼륨을 추가해 연기 효과를 표현하며, CLI 옵션과 PPM 출력 규약은 본 문서를 따른다.
+v1.0.0에서 PDF 기반 중요도 샘플링과 광원 직접 샘플링을 사용해 Cornell smoke 장면을 결정적으로 렌더링하는 외부 인터페이스를 고정한다. Quad/Box/변환/ConstantMedium 구성을 유지하면서 ONB와 Cosine/Sphere/Hittable/Mixture PDF를 도입하며, CLI 옵션과 PPM 출력 규약은 본 문서를 따른다.
 
 ## 대상 버전
-- 버전: v0.9.0
-- 범위: 고정 시드 기반 Cornell smoke 렌더링(CLI 입력이 없어도 실행) + Quad/Box/Translate/RotateY + ConstantMedium 볼륨 두 개
+- 버전: v1.0.0
+- 범위: 고정 시드 기반 Cornell smoke 렌더링(CLI 입력이 없어도 실행) + Quad/Box/Translate/RotateY + ConstantMedium 볼륨 두 개 + Cosine/Sphere/Hittable/Mixture PDF + 광원 직접 샘플링
 
 ## CLI 규약
 - 실행 파일: `raytracer`
@@ -46,44 +46,50 @@ v0.9.0에서 Cornell smoke 장면을 결정적으로 렌더링하는 외부 인�
 
 ## RNG 및 결정성 규칙
 - 난수 생성: `std::mt19937` + `std::uniform_real_distribution<double>(0.0, 1.0)`을 사용한다.
-- 픽셀 좌표 샘플링 → 볼륨 내 산란 거리 샘플링 → 재질 산란 순으로 단일 생성기가 직렬 소비된다.
+- 소비 순서(한 픽셀 기준): 픽셀 좌표 난수 → 카메라 렌즈/셔터 시간 → 각 경로에서 "산란 PDF 선택/샘플링"과 "재질별 추가 난수"를 포함한 재귀 → 볼륨 산란 거리 순서로 단일 생성기가 직렬 소비된다.
+- Cosine/Hittable/Mixture PDF 샘플링과 Lambertian/Isotropic 산란 난수도 동일 생성기를 사용한다.
 - 초기 시드: `--seed` 값으로 생성자를 초기화한다.
-- 동일한 입력(옵션, 시드)에서는 항상 동일한 PPM 문자열을 생성한다.
-- 테스트는 동일 시드 2회 실행 결과 문자열을 비교한다.
+- 동일한 입력(옵션, 시드)에서는 항상 동일한 PPM 문자열을 생성하며, 통합 테스트는 동일 시드 2회 실행 결과 문자열을 비교한다.
 
 ## rayColor 재귀 규약
 - `max_depth`는 CLI/옵션으로 입력받는다. 재귀 깊이가 0 이하가 되면 `(0,0,0)`을 반환하여 추가 기여를 차단한다.
 - 히트 시: 재질이 방출하는 색상을 `emitted`라 할 때,
-  - `Scatter`가 새로운 레이와 감쇠(attenuation)를 반환하면 `emitted + attenuation * rayColor(scattered, depth-1)`을 반환한다.
-  - 산란이 발생하지 않더라도 `emitted`는 누적한다(발광 광원).
+  - Lambertian/Isotropic는 확률적 산란을 반환하며 `ScatteringPdf`는 `cos(theta)/pi`(Lambertian) 또는 `1/(4pi)`(Isotropic)를 사용한다.
+  - Metal/Dielectric는 완전 거울/굴절 산란을 반환해 PDF 평가 없이 단일 산란 레이만 생성한다(is_specular=true).
+  - DiffuseLight는 산란하지 않고 `emitted`만 반환한다.
+  - 비-정확산 재질(is_specular=true)일 경우 `attenuation * rayColor(specular_ray, depth-1)`을 더하고, 확산 재질은 PDF를 사용한다.
+- 중요도 샘플링:
+  - 광원 목록(천장 Quad)을 대상으로 하는 `HittablePdf`와 재질 PDF를 `MixturePdf(0.5 가중)`로 합성한다.
+  - `MixturePdf.Generate`로 얻은 방향을 갖는 레이를 쏘고, `emitted + attenuation * ScatteringPdf(...) * rayColor(next, depth-1) / pdf_value`를 더한다. `pdf_value`가 0이면 기여 0으로 처리한다.
 - 미히트 시: Cornell Box는 닫힌 장면이므로 `(0,0,0)` 배경을 반환한다.
 
 ## 재질/볼륨 규약
-- 공통: `Scatter`는 입력 레이, 교차 정보, RNG를 받아 산란 레이와 감쇠 색을 결정한다. 산란 레이는 입력 레이의 시간값을 그대로 유지한다.
+- 공통: `Scatter`는 입력 레이, 교차 정보, RNG를 받아 산란 레이/감쇠 색/PDF 정보를 결정한다. 산란 레이는 입력 레이의 시간값을 그대로 유지한다.
 - Lambertian(diffuse):
   - 감쇠: 고정 알베도 색상.
-  - 산란 방향: 법선 + 단위 구 내부 임의 벡터. 방향이 거의 0에 가까우면 법선을 사용한다.
+  - 산란: Cosine PDF를 사용하며 `ScatteringPdf`는 `cos(theta)/pi`를 반환한다.
 - Metal:
   - 감쇠: 금속 알베도 색상.
   - 산란 방향: 입력 레이를 법선에 대해 반사한 뒤 `fuzz`(0~1) 배의 단위 구 무작위 벡터를 더한다. 산란 방향이 법선과 같은 쪽을 향하지 않으면 산란 실패로 간주한다.
+  - is_specular=true이며 PDF 기반 샘플링을 사용하지 않는다.
 - Dielectric:
   - 파라미터: 굴절률 `refraction_index`.
   - 법선 방향에 따라 굴절률 비율을 `eta = front_face ? (1.0 / refraction_index) : refraction_index`로 사용한다.
   - 전반사 조건 `eta * sin(theta) > 1`이면 반사만 수행한다.
   - 슐릭 근사 `R(theta) = r0 + (1-r0)*(1-cos(theta))^5`, `r0=((1-eta)/(1+eta))^2`를 사용해 반사/굴절을 선택한다.
-  - 감쇠는 `(1,1,1)`을 사용한다.
+  - 감쇠는 `(1,1,1)`을 사용하며 is_specular=true로 PDF 없이 단일 산란 레이만 반환한다.
 - DiffuseLight(발광):
   - 산란하지 않으며 `Scatter`는 항상 false를 반환한다.
   - `Emitted(u, v, p)`는 `(front_face ? emit_color : (0,0,0))`을 반환한다. emit_color는 생성자 입력 색상이다.
 - Isotropic(볼륨 위상 함수):
   - 감쇠: 입력 텍스처(단색 포함) 샘플 값.
-  - 산란 방향: 단위 구 내부 임의 벡터를 사용하며 법선 제약이 없다.
+  - 산란: 단위 구 내부 임의 방향을 사용하고 `ScatteringPdf`는 `1/(4pi)`를 반환한다.
 
 ## 볼륨 규약
 - ConstantMedium은 경계 Hittable 내부에서 지수 분포로 산란 거리를 샘플링한다.
 - 밀도 `density`에 대해 `-ln(rand01) / density`로 거리를 얻고, 경계 내부 거리를 초과하면 미히트로 처리한다.
 - 충돌 시 `HitRecord`의 위치는 샘플 지점이며, 법선은 위상 함수에 영향이 없으므로 `(1,0,0)`을 사용하고 `front_face=true`로 고정한다.
-- 텍스처는 Isotropic 위상 함수에 전달되어 감쇠 색을 결정한다.
+- 텍스처는 Isotropic 위상 함수에 전달되어 감쇠 색을 결정하며, Isotropic 산란은 Cosine PDF가 아닌 균일 구 PDF를 사용한다.
 
 ## PPM(P3) 출력 규약
 - 포맷: ASCII PPM (P3)

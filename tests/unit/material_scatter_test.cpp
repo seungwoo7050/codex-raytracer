@@ -3,6 +3,7 @@
 #include <random>
 
 #include "raytracer/material.hpp"
+#include "raytracer/pdf.hpp"
 #include "raytracer/ray.hpp"
 #include "raytracer/vec3.hpp"
 
@@ -15,16 +16,17 @@ TEST(MaterialScatterTest, LambertianReturnsAlbedoAndUpwardDirection) {
 
     std::mt19937 generator(123);
     raytracer::Ray incoming(raytracer::Point3(0.0, 0.0, 1.0), raytracer::Vec3(0.0, 0.0, -1.0));
-    raytracer::Color attenuation;
-    raytracer::Ray scattered;
+    raytracer::ScatterRecord scatter_record;
 
-    const bool scattered_ok = material.Scatter(incoming, record, attenuation, scattered, generator);
+    const bool scattered_ok = material.Scatter(incoming, record, scatter_record, generator);
 
     EXPECT_TRUE(scattered_ok);
-    EXPECT_DOUBLE_EQ(attenuation.x(), 0.3);
-    EXPECT_DOUBLE_EQ(attenuation.y(), 0.6);
-    EXPECT_DOUBLE_EQ(attenuation.z(), 0.9);
-    EXPECT_GT(raytracer::Dot(scattered.direction(), record.normal), 0.0);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.x(), 0.3);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.y(), 0.6);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.z(), 0.9);
+    ASSERT_NE(scatter_record.pdf, nullptr);
+    const raytracer::Vec3 generated = scatter_record.pdf->Generate(generator);
+    EXPECT_GT(raytracer::Dot(generated, record.normal), 0.0);
 }
 
 TEST(MaterialScatterTest, MetalReflectsWithoutFuzzWhenAligned) {
@@ -36,18 +38,18 @@ TEST(MaterialScatterTest, MetalReflectsWithoutFuzzWhenAligned) {
 
     std::mt19937 generator(1);
     raytracer::Ray incoming(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 0.0, -1.0));
-    raytracer::Color attenuation;
-    raytracer::Ray scattered;
+    raytracer::ScatterRecord scatter_record;
 
-    const bool scattered_ok = material.Scatter(incoming, record, attenuation, scattered, generator);
+    const bool scattered_ok = material.Scatter(incoming, record, scatter_record, generator);
 
     EXPECT_TRUE(scattered_ok);
-    EXPECT_DOUBLE_EQ(attenuation.x(), 0.8);
-    EXPECT_DOUBLE_EQ(attenuation.y(), 0.8);
-    EXPECT_DOUBLE_EQ(attenuation.z(), 0.8);
-    EXPECT_DOUBLE_EQ(scattered.direction().x(), 0.0);
-    EXPECT_DOUBLE_EQ(scattered.direction().y(), 0.0);
-    EXPECT_DOUBLE_EQ(scattered.direction().z(), 1.0);
+    EXPECT_TRUE(scatter_record.is_specular);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.x(), 0.8);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.y(), 0.8);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.z(), 0.8);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().x(), 0.0);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().y(), 0.0);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().z(), 1.0);
 }
 
 TEST(MaterialScatterTest, DielectricUsesTotalInternalReflectionWhenNecessary) {
@@ -59,16 +61,16 @@ TEST(MaterialScatterTest, DielectricUsesTotalInternalReflectionWhenNecessary) {
 
     std::mt19937 generator(7);
     raytracer::Ray incoming(raytracer::Point3(0.0, 0.0, 0.0), raytracer::Vec3(0.0, 1.0, 0.0));
-    raytracer::Color attenuation;
-    raytracer::Ray scattered;
+    raytracer::ScatterRecord scatter_record;
 
-    const bool scattered_ok = material.Scatter(incoming, record, attenuation, scattered, generator);
+    const bool scattered_ok = material.Scatter(incoming, record, scatter_record, generator);
 
     EXPECT_TRUE(scattered_ok);
-    EXPECT_DOUBLE_EQ(attenuation.x(), 1.0);
-    EXPECT_DOUBLE_EQ(attenuation.y(), 1.0);
-    EXPECT_DOUBLE_EQ(attenuation.z(), 1.0);
-    EXPECT_DOUBLE_EQ(scattered.direction().x(), 0.0);
-    EXPECT_DOUBLE_EQ(scattered.direction().y(), 1.0);
-    EXPECT_DOUBLE_EQ(scattered.direction().z(), 0.0);
+    EXPECT_TRUE(scatter_record.is_specular);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.x(), 1.0);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.y(), 1.0);
+    EXPECT_DOUBLE_EQ(scatter_record.attenuation.z(), 1.0);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().x(), 0.0);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().y(), 1.0);
+    EXPECT_DOUBLE_EQ(scatter_record.specular_ray.direction().z(), 0.0);
 }

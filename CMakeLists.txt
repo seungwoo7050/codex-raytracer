@@ -40,6 +40,7 @@ add_executable(unit_tests
     tests/unit/bvh_test.cpp
     tests/unit/texture_test.cpp
     tests/unit/quad_test.cpp
+    tests/unit/pdf_test.cpp
     src/constant_medium.cpp
     src/sphere.cpp
     src/bvh.cpp

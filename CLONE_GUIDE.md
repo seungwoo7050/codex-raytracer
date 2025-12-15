@@ -1,9 +1,10 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.5.0에서는 조리개 기반 defocus blur 카메라와 셔터 시간에 따라 움직이는 구를 포함한 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.6.0에서는 AABB와 BVH로 장면을 가속하며 defocus blur 카메라와 셔터
+시간에 따라 움직이는 구를 포함한 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
 
-> 주의: 렌더 산출물(PPM/PNG)은 **커밋하지 않는다**(gitignore).
+> 주의: 렌더 산출물(PPM/PNG)과 벤치마크 결과는 **커밋하지 않는다**(gitignore).
 
 ---
 
@@ -28,6 +29,13 @@ ctest --test-dir build --output-on-failure
 ```bash
 ./build/raytracer --width 256 --height 256 --spp 10 --max-depth 10 --seed 1 > output.ppm
 ```
+
+## BVH 벤치마크
+텍스트로 hit 시간만 확인하는 비교 도구다.
+```bash
+./build/bvh_benchmark
+```
+> 결과 숫자는 참고용이며 파일로 저장하더라도 커밋하지 않는다.
 
 ---
 

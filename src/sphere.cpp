@@ -1,8 +1,8 @@
 /*
- * 설명: 고정 구와 이동 구의 레이 교차를 계산한다.
- * 버전: v0.5.0
- * 관련 문서: design/renderer/v0.5.0-blur.md
- * 테스트: tests/unit/sphere_test.cpp
+ * 설명: 고정 구와 이동 구의 레이 교차 및 경계 상자를 계산한다.
+ * 버전: v0.6.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #include "raytracer/sphere.hpp"
 
@@ -37,6 +37,12 @@ bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) co
     record.SetFaceNormal(r, outward_normal);
     record.material = material_;
 
+    return true;
+}
+
+bool Sphere::BoundingBox(double /*time0*/, double /*time1*/, Aabb& output_box) const {
+    const Vec3 radius_vec(radius_, radius_, radius_);
+    output_box = Aabb(center_ - radius_vec, center_ + radius_vec);
     return true;
 }
 
@@ -78,6 +84,14 @@ bool MovingSphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& reco
     record.SetFaceNormal(r, outward_normal);
     record.material = material_;
 
+    return true;
+}
+
+bool MovingSphere::BoundingBox(double time0, double time1, Aabb& output_box) const {
+    const Vec3 radius_vec(radius_, radius_, radius_);
+    const Aabb box0(Center(time0) - radius_vec, Center(time0) + radius_vec);
+    const Aabb box1(Center(time1) - radius_vec, Center(time1) + radius_vec);
+    output_box = SurroundingBox(box0, box1);
     return true;
 }
 

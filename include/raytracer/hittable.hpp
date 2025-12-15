@@ -1,13 +1,14 @@
 /*
- * 설명: 레이와 물체의 교차 정보를 표현하고 추상 인터페이스를 정의한다.
- * 버전: v0.4.0
- * 관련 문서: design/renderer/v0.4.0-materials.md
- * 테스트: tests/unit/sphere_test.cpp
+ * 설명: 레이와 물체의 교차 정보를 표현하고 경계 상자를 포함한 추상 인터페이스를 정의한다.
+ * 버전: v0.6.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once
 
 #include <memory>
 
+#include "raytracer/aabb.hpp"
 #include "raytracer/ray.hpp"
 
 namespace raytracer {
@@ -31,6 +32,7 @@ class Hittable {
 public:
     virtual ~Hittable() = default;
     virtual bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const = 0;
+    virtual bool BoundingBox(double time0, double time1, Aabb& output_box) const = 0;
 };
 
 }  // namespace raytracer

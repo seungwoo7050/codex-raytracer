@@ -1,7 +1,7 @@
 /*
- * 설명: defocus blur와 motion blur를 포함한 장면을 PPM(P3) 규격으로 렌더링한다.
- * 버전: v0.5.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.5.0-blur.md
+ * 설명: BVH로 가속된 defocus blur와 motion blur 장면을 PPM(P3) 규격으로 렌더링한다.
+ * 버전: v0.6.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #pragma once

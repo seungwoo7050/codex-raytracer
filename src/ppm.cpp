@@ -1,7 +1,7 @@
 /*
- * 설명: defocus blur와 motion blur가 적용된 Lambertian/Metal/Dielectric 장면을 PPM(P3) 규격에 맞춰 렌더링한다.
- * 버전: v0.5.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.5.0-blur.md
+ * 설명: defocus blur와 motion blur가 적용된 Lambertian/Metal/Dielectric 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
+ * 버전: v0.6.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -13,6 +13,7 @@
 #include <random>
 #include <sstream>
 
+#include "raytracer/bvh.hpp"
 #include "raytracer/camera.hpp"
 #include "raytracer/hittable_list.hpp"
 #include "raytracer/material.hpp"
@@ -87,6 +88,9 @@ std::string RenderMaterialImage(const RenderOptions& options) {
     const Camera camera(look_from, look_at, vup, options.vertical_fov_degrees, aspect_ratio, options.aperture, focus_dist,
                        options.shutter_open_time, options.shutter_close_time);
     HittableList world = BuildScene();
+    const std::shared_ptr<BvhNode> bvh_tree =
+        world.Objects().empty() ? nullptr : std::make_shared<BvhNode>(world, options.shutter_open_time, options.shutter_close_time);
+    const Hittable& world_view = bvh_tree ? static_cast<const Hittable&>(*bvh_tree) : static_cast<const Hittable&>(world);
     std::mt19937 generator(options.seed);
 
     std::ostringstream output;
@@ -108,7 +112,7 @@ std::string RenderMaterialImage(const RenderOptions& options) {
                                            (static_cast<double>(options.height) - 1.0);
 
                 const Ray r = camera.GetRay(u, v, generator);
-                pixel_color += RayColor(r, options.max_depth, world, generator);
+                pixel_color += RayColor(r, options.max_depth, world_view, generator);
             }
 
             const Color averaged_color = pixel_color / static_cast<double>(options.samples_per_pixel);

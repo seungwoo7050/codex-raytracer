@@ -1,20 +1,25 @@
 /*
  * 설명: 레이와 물체의 교차 정보를 표현하고 추상 인터페이스를 정의한다.
- * 버전: v0.2.0
- * 관련 문서: design/renderer/v0.2.0-sphere-hit.md
+ * 버전: v0.4.0
+ * 관련 문서: design/renderer/v0.4.0-materials.md
  * 테스트: tests/unit/sphere_test.cpp
  */
 #pragma once
 
+#include <memory>
+
 #include "raytracer/ray.hpp"
 
 namespace raytracer {
+
+class Material;
 
 struct HitRecord {
     Point3 p;
     Vec3 normal;
     double t = 0.0;
     bool front_face = true;
+    std::shared_ptr<Material> material;
 
     void SetFaceNormal(const Ray& r, const Vec3& outward_normal) {
         front_face = Dot(r.direction(), outward_normal) < 0;

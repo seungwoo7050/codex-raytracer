@@ -1,7 +1,7 @@
 /*
  * 설명: Hittable 트리로 구성된 BVH 노드를 정의하고 경계 상자 기반 가속 hit 함수를 제공한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/bvh_test.cpp
  */
 #pragma once
@@ -22,7 +22,7 @@ public:
     BvhNode(std::vector<std::shared_ptr<Hittable>> objects, double time0, double time1);
     BvhNode(const HittableList& list, double time0, double time1);
 
-    bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const override;
+    bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const override;
     bool BoundingBox(double time0, double time1, Aabb& output_box) const override;
 
 private:

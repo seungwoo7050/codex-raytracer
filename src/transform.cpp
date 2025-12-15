@@ -1,7 +1,7 @@
 /*
  * 설명: Hittable 객체에 평행 이동과 Y축 회전을 적용해 교차와 경계를 변환한다.
- * 버전: v0.8.0
- * 관련 문서: design/renderer/v0.8.0-cornell.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/quad_test.cpp
  */
 #include "raytracer/transform.hpp"
@@ -13,9 +13,9 @@ namespace raytracer {
 
 Translate::Translate(std::shared_ptr<Hittable> object, const Vec3& offset) : object_(std::move(object)), offset_(offset) {}
 
-bool Translate::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool Translate::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const {
     Ray moved_ray(r.origin() - offset_, r.direction(), r.time());
-    if (!object_->Hit(moved_ray, t_min, t_max, record)) {
+    if (!object_->Hit(moved_ray, t_min, t_max, record, generator)) {
         return false;
     }
 
@@ -70,7 +70,7 @@ RotateY::RotateY(std::shared_ptr<Hittable> object, double angle_degrees) : objec
     bbox_ = Aabb(min_point, max_point);
 }
 
-bool RotateY::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool RotateY::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const {
     const double orig_x = cos_theta_ * r.origin().x() - sin_theta_ * r.origin().z();
     const double orig_z = sin_theta_ * r.origin().x() + cos_theta_ * r.origin().z();
     const Point3 origin(orig_x, r.origin().y(), orig_z);
@@ -81,7 +81,7 @@ bool RotateY::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) c
 
     const Ray rotated_ray(origin, direction, r.time());
 
-    if (!object_->Hit(rotated_ray, t_min, t_max, record)) {
+    if (!object_->Hit(rotated_ray, t_min, t_max, record, generator)) {
         return false;
     }
 

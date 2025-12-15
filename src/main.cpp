@@ -1,7 +1,7 @@
 /*
- * 설명: CLI 인자를 해석해 Cornell Box 기반 Quad/박스/광원 장면을 BVH로 가속해 결정적으로 렌더링한다.
- * 버전: v0.8.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md
+ * 설명: CLI 인자를 해석해 Cornell smoke 장면을 BVH로 가속해 결정적으로 렌더링한다.
+ * 버전: v0.9.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include <cstdint>

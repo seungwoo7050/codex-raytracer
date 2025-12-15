@@ -1,7 +1,7 @@
 /*
  * 설명: Hittable들을 BVH로 구성해 경계 상자를 이용한 빠른 hit 판정을 수행한다.
- * 버전: v0.6.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 버전: v0.9.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.9.0-volume.md
  * 테스트: tests/unit/bvh_test.cpp
  */
 #include "raytracer/bvh.hpp"
@@ -108,7 +108,7 @@ int BvhNode::ChooseSplitAxis(const std::vector<std::shared_ptr<Hittable>>& objec
     return 2;
 }
 
-bool BvhNode::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+bool BvhNode::Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const {
     if (!box_.Hit(r, t_min, t_max)) {
         return false;
     }
@@ -116,8 +116,8 @@ bool BvhNode::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) c
     HitRecord left_record;
     HitRecord right_record;
 
-    const bool hit_left = left_->Hit(r, t_min, t_max, left_record);
-    const bool hit_right = right_->Hit(r, t_min, hit_left ? left_record.t : t_max, right_record);
+    const bool hit_left = left_->Hit(r, t_min, t_max, left_record, generator);
+    const bool hit_right = right_->Hit(r, t_min, hit_left ? left_record.t : t_max, right_record, generator);
 
     if (hit_left && hit_right) {
         record = right_record.t < left_record.t ? right_record : left_record;

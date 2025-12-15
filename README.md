@@ -1,7 +1,8 @@
 # ray-tracer (C++17)
 
-ASCII PPM(P3) 이미지를 출력하는 교육용 CPU 레이트레이서다. v0.8.0에서는 Quad/Box로 구성된 Cornell Box를 area light와 함께 BVH로 가속해 결정적으로
-렌더링하며 Lambertian/Metal/Dielectric/발광 재질과 Translate/RotateY 변환을 지원한다. CLI 규약과 출력 형식은 `design/protocol/contract.md`를 따른다.
+ASCII PPM(P3) 이미지를 출력하는 교육용 CPU 레이트레이서다. v0.9.0에서는 Cornell Box 내부에 ConstantMedium 볼륨 두 개를 추가한 Cornell smoke를 area
+light와 함께 BVH로 가속해 결정적으로 렌더링하며 Lambertian/Metal/Dielectric/발광 재질, Isotropic 위상 함수, Translate/RotateY 변환을 지원한다.
+CLI 규약과 출력 형식은 `design/protocol/contract.md`를 따른다.
 
 ## 빠른 시작
 - 빌드: `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`

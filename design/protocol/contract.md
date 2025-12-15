@@ -1,11 +1,11 @@
 # design/protocol/contract.md
 
 ## 목적
-v0.8.0에서 Quad/Box 기반 Cornell Box와 발광 광원을 렌더링하는 외부 인터페이스를 고정한다. Lambertian/Metal/Dielectric/발광 재질과 Translate/RotateY 변환을 사용하는 결정적 Cornell Box가 기본 장면이며, CLI 옵션과 PPM 출력 규약은 본 문서를 따른다.
+v0.9.0에서 Cornell smoke 장면을 결정적으로 렌더링하는 외부 인터페이스를 고정한다. Quad/Box/변환을 그대로 사용하되 Box를 경계로 하는 ConstantMedium 볼륨을 추가해 연기 효과를 표현하며, CLI 옵션과 PPM 출력 규약은 본 문서를 따른다.
 
 ## 대상 버전
-- 버전: v0.8.0
-- 범위: 고정 시드 기반 Cornell Box 렌더링(CLI 입력이 없더라도 실행) + Quad 프리미티브 + 발광 재질 + Translate/RotateY 적용 박스/벽
+- 버전: v0.9.0
+- 범위: 고정 시드 기반 Cornell smoke 렌더링(CLI 입력이 없어도 실행) + Quad/Box/Translate/RotateY + ConstantMedium 볼륨 두 개
 
 ## CLI 규약
 - 실행 파일: `raytracer`
@@ -42,11 +42,11 @@ v0.8.0에서 Quad/Box 기반 Cornell Box와 발광 광원을 렌더링하는 외
     - `u_norm = (width == 1) ? 0.5 : (x + rand01) / (width - 1)`
     - `v_norm = (height == 1) ? 0.5 : (height - 1 - y + rand01) / (height - 1)`
     - `rand01`은 `[0, 1)` 범위 균일 분포 난수다.
-  - defocus 없이 샘플링한 레이를 생성하고 모든 색상 샘플을 합산한 뒤 `samples_per_pixel`로 나누어 평균을 만든다.
+  - defocus 없이 샘플링한 레이를 생성하고 모든 색상 샘플을 합산한 뒤 `samples_per_pixel`로 나눈다.
 
 ## RNG 및 결정성 규칙
 - 난수 생성: `std::mt19937` + `std::uniform_real_distribution<double>(0.0, 1.0)`을 사용한다.
-- 재질 산란과 픽셀 좌표 샘플 모두 동일 생성기 인스턴스에서 직렬화되어 소비된다.
+- 픽셀 좌표 샘플링 → 볼륨 내 산란 거리 샘플링 → 재질 산란 순으로 단일 생성기가 직렬 소비된다.
 - 초기 시드: `--seed` 값으로 생성자를 초기화한다.
 - 동일한 입력(옵션, 시드)에서는 항상 동일한 PPM 문자열을 생성한다.
 - 테스트는 동일 시드 2회 실행 결과 문자열을 비교한다.
@@ -58,7 +58,7 @@ v0.8.0에서 Quad/Box 기반 Cornell Box와 발광 광원을 렌더링하는 외
   - 산란이 발생하지 않더라도 `emitted`는 누적한다(발광 광원).
 - 미히트 시: Cornell Box는 닫힌 장면이므로 `(0,0,0)` 배경을 반환한다.
 
-## 재질 규약
+## 재질/볼륨 규약
 - 공통: `Scatter`는 입력 레이, 교차 정보, RNG를 받아 산란 레이와 감쇠 색을 결정한다. 산란 레이는 입력 레이의 시간값을 그대로 유지한다.
 - Lambertian(diffuse):
   - 감쇠: 고정 알베도 색상.
@@ -75,6 +75,15 @@ v0.8.0에서 Quad/Box 기반 Cornell Box와 발광 광원을 렌더링하는 외
 - DiffuseLight(발광):
   - 산란하지 않으며 `Scatter`는 항상 false를 반환한다.
   - `Emitted(u, v, p)`는 `(front_face ? emit_color : (0,0,0))`을 반환한다. emit_color는 생성자 입력 색상이다.
+- Isotropic(볼륨 위상 함수):
+  - 감쇠: 입력 텍스처(단색 포함) 샘플 값.
+  - 산란 방향: 단위 구 내부 임의 벡터를 사용하며 법선 제약이 없다.
+
+## 볼륨 규약
+- ConstantMedium은 경계 Hittable 내부에서 지수 분포로 산란 거리를 샘플링한다.
+- 밀도 `density`에 대해 `-ln(rand01) / density`로 거리를 얻고, 경계 내부 거리를 초과하면 미히트로 처리한다.
+- 충돌 시 `HitRecord`의 위치는 샘플 지점이며, 법선은 위상 함수에 영향이 없으므로 `(1,0,0)`을 사용하고 `front_face=true`로 고정한다.
+- 텍스처는 Isotropic 위상 함수에 전달되어 감쇠 색을 결정한다.
 
 ## PPM(P3) 출력 규약
 - 포맷: ASCII PPM (P3)
@@ -87,24 +96,23 @@ v0.8.0에서 Quad/Box 기반 Cornell Box와 발광 광원을 렌더링하는 외
   - 각 픽셀은 `R G B` 세 값으로 이루어진 한 줄로 기록하며, 값 사이에는 공백 하나만 둔다.
   - 모든 줄 끝에는 개행(\n)을 넣는다. 마지막 픽셀 뒤에도 개행을 유지한다.
 - 색상 생성 규칙(결정적):
-  - 장면: 555 단위 크기의 Cornell Box로 고정한다.
+  - 장면: 555 단위 Cornell Box이며 내부 두 상자가 ConstantMedium 역할을 한다.
   - 재질 정의
     - `Lambertian red = (0.65, 0.05, 0.05)`
     - `Lambertian green = (0.12, 0.45, 0.15)`
     - `Lambertian white = (0.73, 0.73, 0.73)`
     - `DiffuseLight light = (15.0, 15.0, 15.0)`
-  - 벽/천장/바닥/뒤쪽은 Quad로 구성하며 모든 면이 내부(박스 중심)를 향하도록 법선 방향을 설정한다.
+  - 벽/천장/바닥/뒤쪽은 Quad로 구성하며 모든 면이 내부를 향하도록 법선을 설정한다.
     - 오른쪽 벽(x=555): `Quad(q=(555,0,0), u=(0,0,555), v=(0,555,0), material=green)`
     - 왼쪽 벽(x=0): `Quad(q=(0,0,0), u=(0,555,0), v=(0,0,555), material=red)`
     - 천장(y=555): `Quad(q=(0,555,0), u=(555,0,0), v=(0,0,555), material=white)`
     - 바닥(y=0): `Quad(q=(0,0,0), u=(555,0,0), v=(0,0,555), material=white)`
     - 뒤쪽 면(z=555): `Quad(q=(0,0,555), u=(555,0,0), v=(0,555,0), material=white)`
-  - 광원: 천장 안쪽에 배치한 area light Quad. 법선은 아래(+y 반대)를 향한다.
+  - 광원: 천장 안쪽 area light Quad(법선은 -y).
     - `Quad(q=(213,554,227), u=(130,0,0), v=(0,0,105), material=light)`
-  - 물체: 두 개의 상자(Box)로 구성하며 각 면은 white Lambertian이다.
-    - Box는 여섯 개의 Quad로 이루어진 축 정렬 직육면체이며, `Box(min, max, material)`로 정의한다.
-    - 첫 번째 상자: `min=(0,0,0)`, `max=(165,165,165)` → `RotateY(-18도)` 후 `Translate((130,0,65))` 적용.
-    - 두 번째 상자: `min=(0,0,0)`, `max=(165,330,165)` → `RotateY(15도)` 후 `Translate((265,0,295))` 적용.
+  - 볼륨 경계: Box로 정의된 경계에 ConstantMedium을 적용한다.
+    - 첫 번째 볼륨: `Box(min=(0,0,0), max=(165,165,165))` → `RotateY(-18°)` → `Translate((130,0,65))` 후 `density=0.01`, 색상 `(0,0,0)`
+    - 두 번째 볼륨: `Box(min=(0,0,0), max=(165,330,165))` → `RotateY(15°)` → `Translate((265,0,295))` 후 `density=0.01`, 색상 `(1,1,1)`
   - Quad hit 판정: 평면 교차 후 Quad 내부를 barycentric 검사로 확인하며, `t_min=0.001`, `t_max=+∞`를 사용한다.
   - Box/Quad 경계: AABB를 반환하며 두께 0인 축과 무관하게 1e-4 패딩을 적용한다.
   - 표면 방향: `front_face`는 레이 방향과 법선 내적 부호로 결정하며, 내부에서 나가는 경우 법선을 뒤집는다.

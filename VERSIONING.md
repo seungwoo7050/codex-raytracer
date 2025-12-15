@@ -90,7 +90,7 @@ ray-tracer (C++17 CPU 레이트레이서) 버전 로드맵.
   - Quad hit 단위 테스트
 
 ### v0.9.0 — Volume(ConstantMedium) + Smoke 씬
-- 상태: ⬜
+- 상태: ✅
 - 목표:
   - ConstantMedium
   - Cornell smoke 씬

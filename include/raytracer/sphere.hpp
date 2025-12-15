@@ -1,12 +1,13 @@
 /*
- * 설명: 고정 구와 시간에 따라 이동하는 구의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
+ * 설명: 고정 구와 시간에 따라 이동하는 구의 레이 교차, 경계 상자, 샘플링 PDF를 계산한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp, tests/unit/pdf_test.cpp
  */
 #pragma once
 
 #include <memory>
+#include <random>
 
 #include "raytracer/aabb.hpp"
 #include "raytracer/hittable.hpp"
@@ -20,6 +21,8 @@ public:
 
     bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const override;
     bool BoundingBox(double time0, double time1, Aabb& output_box) const override;
+    double PdfValue(const Point3& origin, const Vec3& direction) const override;
+    Vec3 Random(const Point3& origin, std::mt19937& generator) const override;
 
 private:
     Point3 center_;

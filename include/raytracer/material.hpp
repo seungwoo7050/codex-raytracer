@@ -1,8 +1,8 @@
 /*
- * 설명: 표면 재질과 볼륨 위상 함수를 정의하고 텍스처 기반 반사/굴절/발광 동작을 계산한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/material_scatter_test.cpp, tests/unit/texture_test.cpp
+ * 설명: 표면 재질과 볼륨 위상 함수를 정의하고 텍스처 기반 반사/굴절/발광/PDF 샘플링 동작을 계산한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/material_scatter_test.cpp, tests/unit/texture_test.cpp, tests/unit/pdf_test.cpp
  */
 #pragma once
 
@@ -11,6 +11,7 @@
 #include <random>
 
 #include "raytracer/hittable.hpp"
+#include "raytracer/pdf.hpp"
 #include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
 #include "raytracer/texture.hpp"
@@ -18,11 +19,24 @@
 
 namespace raytracer {
 
+struct ScatterRecord {
+    Ray specular_ray;
+    bool is_specular = false;
+    Color attenuation;
+    std::shared_ptr<Pdf> pdf;
+};
+
 class Material {
 public:
     virtual ~Material() = default;
-    virtual bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
+    virtual bool Scatter(const Ray& r_in, const HitRecord& record, ScatterRecord& scatter_record,
                          std::mt19937& generator) const = 0;
+    virtual double ScatteringPdf(const Ray& r_in, const HitRecord& record, const Ray& scattered) const {
+        (void)r_in;
+        (void)record;
+        (void)scattered;
+        return 0.0;
+    }
     virtual Color Emitted(double /*u*/, double /*v*/, const Point3& /*p*/) const { return Color(0.0, 0.0, 0.0); }
 };
 
@@ -31,19 +45,22 @@ public:
     explicit Lambertian(const Color& albedo) : albedo_(std::make_shared<SolidColor>(albedo)) {}
     explicit Lambertian(std::shared_ptr<Texture> texture) : albedo_(std::move(texture)) {}
 
-    bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
-                 std::mt19937& generator) const override {
-        Vec3 scatter_direction = record.normal + RandomUnitVector(generator);
-        if (scatter_direction.NearZero()) {
-            scatter_direction = record.normal;
-        }
-
-        scattered = Ray(record.p, scatter_direction, r_in.time());
-        attenuation = albedo_->Value(record.u, record.v, record.p);
+    bool Scatter(const Ray& /*r_in*/, const HitRecord& record, ScatterRecord& scatter_record,
+                 std::mt19937& /*generator*/) const override {
+        scatter_record.is_specular = false;
+        scatter_record.attenuation = albedo_->Value(record.u, record.v, record.p);
+        scatter_record.pdf = std::make_shared<CosinePdf>(record.normal);
         return true;
     }
 
+    double ScatteringPdf(const Ray& r_in, const HitRecord& record, const Ray& scattered) const override {
+        (void)r_in;
+        const double cosine = Dot(record.normal, UnitVector(scattered.direction()));
+        return cosine < 0.0 ? 0.0 : cosine / kPi;
+    }
+
 private:
+    static constexpr double kPi = 3.1415926535897932385;
     std::shared_ptr<Texture> albedo_;
 };
 
@@ -51,14 +68,15 @@ class Metal : public Material {
 public:
     Metal(const Color& albedo, double fuzz) : albedo_(albedo), fuzz_(fuzz < 1.0 ? fuzz : 1.0) {}
 
-    bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
+    bool Scatter(const Ray& r_in, const HitRecord& record, ScatterRecord& scatter_record,
                  std::mt19937& generator) const override {
         const Vec3 unit_direction = UnitVector(r_in.direction());
         const Vec3 reflected = Reflect(unit_direction, record.normal);
         const Vec3 scattered_direction = reflected + fuzz_ * RandomInUnitSphere(generator);
-        scattered = Ray(record.p, scattered_direction, r_in.time());
-        attenuation = albedo_;
-        return Dot(scattered.direction(), record.normal) > 0;
+        scatter_record.specular_ray = Ray(record.p, scattered_direction, r_in.time());
+        scatter_record.attenuation = albedo_;
+        scatter_record.is_specular = true;
+        return Dot(scatter_record.specular_ray.direction(), record.normal) > 0;
     }
 
 private:
@@ -70,9 +88,9 @@ class Dielectric : public Material {
 public:
     explicit Dielectric(double refraction_index) : refraction_index_(refraction_index) {}
 
-    bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
+    bool Scatter(const Ray& r_in, const HitRecord& record, ScatterRecord& scatter_record,
                  std::mt19937& generator) const override {
-        attenuation = Color(1.0, 1.0, 1.0);
+        scatter_record.attenuation = Color(1.0, 1.0, 1.0);
         const double refraction_ratio = record.front_face ? (1.0 / refraction_index_) : refraction_index_;
 
         const Vec3 unit_direction = UnitVector(r_in.direction());
@@ -87,7 +105,8 @@ public:
             direction = Refract(unit_direction, record.normal, refraction_ratio);
         }
 
-        scattered = Ray(record.p, direction, r_in.time());
+        scatter_record.specular_ray = Ray(record.p, direction, r_in.time());
+        scatter_record.is_specular = true;
         return true;
     }
 
@@ -105,7 +124,7 @@ class DiffuseLight : public Material {
 public:
     explicit DiffuseLight(const Color& emit) : emit_(emit) {}
 
-    bool Scatter(const Ray& /*r_in*/, const HitRecord& /*record*/, Color& /*attenuation*/, Ray& /*scattered*/,
+    bool Scatter(const Ray& /*r_in*/, const HitRecord& /*record*/, ScatterRecord& /*scatter_record*/,
                  std::mt19937& /*generator*/) const override {
         return false;
     }
@@ -121,14 +140,21 @@ public:
     explicit Isotropic(const Color& albedo) : albedo_(std::make_shared<SolidColor>(albedo)) {}
     explicit Isotropic(std::shared_ptr<Texture> texture) : albedo_(std::move(texture)) {}
 
-    bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
+    bool Scatter(const Ray& r_in, const HitRecord& record, ScatterRecord& scatter_record,
                  std::mt19937& generator) const override {
-        scattered = Ray(record.p, RandomInUnitSphere(generator), r_in.time());
-        attenuation = albedo_->Value(record.u, record.v, record.p);
+        scatter_record.is_specular = false;
+        scatter_record.attenuation = albedo_->Value(record.u, record.v, record.p);
+        scatter_record.pdf = std::make_shared<UniformSpherePdf>();
+        scatter_record.specular_ray = Ray(record.p, RandomInUnitSphere(generator), r_in.time());
         return true;
     }
 
+    double ScatteringPdf(const Ray& /*r_in*/, const HitRecord& /*record*/, const Ray& /*scattered*/) const override {
+        return uniform_pdf_;
+    }
+
 private:
+    static constexpr double uniform_pdf_ = 1.0 / (4.0 * 3.1415926535897932385);
     std::shared_ptr<Texture> albedo_;
 };
 

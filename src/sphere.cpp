@@ -1,12 +1,16 @@
 /*
- * 설명: 고정 구와 이동 구의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
+ * 설명: 고정 구와 이동 구의 레이 교차, 경계 상자, 샘플링 PDF를 계산한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp, tests/unit/pdf_test.cpp
  */
 #include "raytracer/sphere.hpp"
 
 #include <cmath>
+#include <limits>
+
+#include "raytracer/onb.hpp"
+#include "raytracer/random.hpp"
 
 namespace raytracer {
 
@@ -107,6 +111,26 @@ bool MovingSphere::BoundingBox(double time0, double time1, Aabb& output_box) con
     const Aabb box1(Center(time1) - radius_vec, Center(time1) + radius_vec);
     output_box = SurroundingBox(box0, box1);
     return true;
+}
+
+double Sphere::PdfValue(const Point3& origin, const Vec3& direction) const {
+    HitRecord record;
+    std::mt19937 dummy_generator(0);
+    if (!Hit(Ray(origin, direction), 0.001, std::numeric_limits<double>::infinity(), record, dummy_generator)) {
+        return 0.0;
+    }
+
+    const double distance_squared = (center_ - origin).length_squared();
+    const double cos_theta_max = std::sqrt(1.0 - radius_ * radius_ / distance_squared);
+    const double solid_angle = 2.0 * std::acos(-1.0) * (1.0 - cos_theta_max);
+    return 1.0 / solid_angle;
+}
+
+Vec3 Sphere::Random(const Point3& origin, std::mt19937& generator) const {
+    const Vec3 direction = center_ - origin;
+    Onb onb;
+    onb.BuildFromW(direction);
+    return onb.Local(RandomToSphere(radius_, direction.length_squared(), generator));
 }
 
 }  // namespace raytracer

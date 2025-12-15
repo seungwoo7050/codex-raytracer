@@ -1,8 +1,8 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.9.0에서는 Cornell Box 내부에 두 개의 ConstantMedium 볼륨을 배치한 Cornell smoke
-장면을 BVH로 가속해 결정적으로 렌더링하며 Translate/RotateY 변환과 발광 재질, Isotropic 위상 함수를 포함한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v1.0.0에서는 Cornell Box 내부에 두 개의 ConstantMedium 볼륨을 배치한 Cornell smoke
+장면을 BVH로 가속하고 Cosine/Hittable/Mixture PDF를 활용해 천장 광원을 직접 샘플링하며 Translate/RotateY 변환, 발광 재질, Isotropic 위상 함수를 포함한다.
 
 > 주의: 렌더 산출물(PPM/PNG)과 벤치마크 결과는 **커밋하지 않는다**(gitignore).
 
@@ -29,6 +29,7 @@ ctest --test-dir build --output-on-failure
 ```bash
 ./build/raytracer --width 256 --height 256 --spp 10 --max-depth 20 --seed 1 > output.ppm
 ```
+- 광원 직접 샘플링이 적용되어 있으므로 동일 시드를 유지하면 결과가 완전히 일치한다.
 
 ## BVH 벤치마크
 텍스트로 hit 시간만 확인하는 비교 도구다.
@@ -54,6 +55,6 @@ convert output.ppm output.png
 ---
 
 ## 결정성(테스트/비교) 팁
-랜덤을 쓰는 버전부터는, 항상 고정 시드를 사용하면 비교가 쉬워진다.
+- 모든 랜덤은 단일 `std::mt19937`로 직렬 소비된다. 고정 시드를 사용하면 PDF 샘플링까지 동일하게 재현된다.
 - 예: `--seed 1234`
-- 정확한 규칙은 `design/protocol/contract.md`를 정본으로 한다.
+- 정확한 규칙은 `design/protocol/contract.md`를 정본으로 한다. 통합 테스트는 4x4 Cornell mini 결과 문자열을 그대로 비교한다.

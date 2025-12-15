@@ -1,12 +1,13 @@
 /*
- * 설명: Quad와 Box 기하를 정의하고 경계 상자와 UV 정보를 계산한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/quad_test.cpp
+ * 설명: Quad와 Box 기하를 정의하고 경계 상자, UV, 샘플링 PDF 정보를 계산한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/quad_test.cpp, tests/unit/pdf_test.cpp
  */
 #pragma once
 
 #include <memory>
+#include <random>
 
 #include "raytracer/aabb.hpp"
 #include "raytracer/hittable.hpp"
@@ -22,6 +23,8 @@ public:
 
     bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record, std::mt19937& generator) const override;
     bool BoundingBox(double time0, double time1, Aabb& output_box) const override;
+    double PdfValue(const Point3& origin, const Vec3& direction) const override;
+    Vec3 Random(const Point3& origin, std::mt19937& generator) const override;
 
 private:
     Point3 q_;

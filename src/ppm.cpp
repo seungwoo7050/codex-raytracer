@@ -1,7 +1,7 @@
 /*
- * 설명: Cornell smoke 볼륨 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
- * 버전: v0.9.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
+ * 설명: Cornell smoke 볼륨 장면을 BVH로 가속하고 광원 PDF를 혼합해 PPM(P3) 규격으로 렌더링한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v1.0.0-overview.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -18,6 +18,7 @@
 #include "raytracer/constant_medium.hpp"
 #include "raytracer/hittable_list.hpp"
 #include "raytracer/material.hpp"
+#include "raytracer/pdf.hpp"
 #include "raytracer/quad.hpp"
 #include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
@@ -34,7 +35,8 @@ int ToChannel(double value) {
     return ClampColor(static_cast<int>(std::lround(255.0 * clamped)));
 }
 
-Color RayColor(const Ray& r, int depth, const Hittable& world, std::mt19937& generator) {
+Color RayColor(const Ray& r, int depth, const Hittable& world, const std::shared_ptr<Hittable>& lights,
+               std::mt19937& generator) {
     if (depth <= 0) {
         return Color(0.0, 0.0, 0.0);
     }
@@ -44,16 +46,39 @@ Color RayColor(const Ray& r, int depth, const Hittable& world, std::mt19937& gen
         return Color(0.0, 0.0, 0.0);
     }
 
-    Ray scattered;
-    Color attenuation;
     const Color emitted = (record.material && record.front_face) ? record.material->Emitted(record.u, record.v, record.p)
-                                                                 : Color(0.0, 0.0, 0.0);
+                                                                  : Color(0.0, 0.0, 0.0);
 
-    if (record.material && record.material->Scatter(r, record, attenuation, scattered, generator)) {
-        return emitted + attenuation * RayColor(scattered, depth - 1, world, generator);
+    if (!record.material) {
+        return emitted;
     }
 
-    return emitted;
+    ScatterRecord scatter_record;
+    if (!record.material->Scatter(r, record, scatter_record, generator)) {
+        return emitted;
+    }
+
+    if (scatter_record.is_specular) {
+        return emitted + scatter_record.attenuation * RayColor(scatter_record.specular_ray, depth - 1, world, lights, generator);
+    }
+
+    if (!scatter_record.pdf) {
+        return emitted;
+    }
+
+    std::shared_ptr<Pdf> light_pdf = lights ? std::make_shared<HittablePdf>(lights, record.p) : nullptr;
+    std::shared_ptr<Pdf> mixed_pdf = light_pdf ? std::make_shared<MixturePdf>(light_pdf, scatter_record.pdf) : scatter_record.pdf;
+
+    const Vec3 direction = mixed_pdf->Generate(generator);
+    const Ray scattered(record.p, direction, r.time());
+    const double pdf_value = mixed_pdf->Value(scattered.direction());
+    if (pdf_value <= 0.0) {
+        return emitted;
+    }
+
+    const double scattering_pdf = record.material->ScatteringPdf(r, record, scattered);
+    const Color recursive = RayColor(scattered, depth - 1, world, lights, generator);
+    return emitted + scatter_record.attenuation * scattering_pdf * recursive / pdf_value;
 }
 
 void WriteColor(std::ostringstream& output, const Color& pixel_color) {
@@ -64,7 +89,7 @@ void WriteColor(std::ostringstream& output, const Color& pixel_color) {
     output << ir << ' ' << ig << ' ' << ib << "\n";
 }
 
-HittableList BuildCornellSmoke() {
+HittableList BuildCornellSmoke(HittableList& lights) {
     HittableList world;
 
     const auto red = std::make_shared<Lambertian>(Color(0.65, 0.05, 0.05));
@@ -74,7 +99,9 @@ HittableList BuildCornellSmoke() {
 
     world.Add(std::make_shared<Quad>(Point3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), Vec3(0.0, 555.0, 0.0), green));
     world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 0.0), Vec3(0.0, 555.0, 0.0), Vec3(0.0, 0.0, 555.0), red));
-    world.Add(std::make_shared<Quad>(Point3(213.0, 554.0, 227.0), Vec3(130.0, 0.0, 0.0), Vec3(0.0, 0.0, 105.0), light));
+    const auto ceiling_light = std::make_shared<Quad>(Point3(213.0, 554.0, 227.0), Vec3(130.0, 0.0, 0.0), Vec3(0.0, 0.0, 105.0), light);
+    world.Add(ceiling_light);
+    lights.Add(ceiling_light);
     world.Add(std::make_shared<Quad>(Point3(0.0, 555.0, 0.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), white));
     world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 0.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), white));
     world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 555.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 555.0, 0.0), white));
@@ -102,10 +129,14 @@ std::string RenderMaterialImage(const RenderOptions& options) {
     const double focus_dist = (look_from - look_at).length();
     const Camera camera(look_from, look_at, vup, options.vertical_fov_degrees, aspect_ratio, options.aperture, focus_dist,
                        options.shutter_open_time, options.shutter_close_time);
-    HittableList world = BuildCornellSmoke();
+
+    HittableList lights;
+    HittableList world = BuildCornellSmoke(lights);
     const std::shared_ptr<BvhNode> bvh_tree =
         world.Objects().empty() ? nullptr : std::make_shared<BvhNode>(world, options.shutter_open_time, options.shutter_close_time);
     const Hittable& world_view = bvh_tree ? static_cast<const Hittable&>(*bvh_tree) : static_cast<const Hittable&>(world);
+    const std::shared_ptr<Hittable> lights_view = lights.Objects().empty() ? nullptr : std::make_shared<HittableList>(lights);
+
     std::mt19937 generator(options.seed);
 
     std::ostringstream output;
@@ -127,7 +158,7 @@ std::string RenderMaterialImage(const RenderOptions& options) {
                                            (static_cast<double>(options.height) - 1.0);
 
                 const Ray r = camera.GetRay(u, v, generator);
-                pixel_color += RayColor(r, options.max_depth, world_view, generator);
+                pixel_color += RayColor(r, options.max_depth, world_view, lights_view, generator);
             }
 
             const Color averaged_color = pixel_color / static_cast<double>(options.samples_per_pixel);

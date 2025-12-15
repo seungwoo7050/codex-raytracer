@@ -1,13 +1,17 @@
 /*
- * 설명: Quad와 Box의 레이 교차 및 경계 상자를 계산한다.
- * 버전: v0.9.0
- * 관련 문서: design/renderer/v0.8.0-cornell.md, design/renderer/v0.9.0-volume.md
- * 테스트: tests/unit/quad_test.cpp
+ * 설명: Quad와 Box의 레이 교차, 경계 상자, 샘플링 PDF를 계산한다.
+ * 버전: v1.0.0
+ * 관련 문서: design/renderer/v1.0.0-overview.md
+ * 테스트: tests/unit/quad_test.cpp, tests/unit/pdf_test.cpp
  */
 #include "raytracer/quad.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <random>
+#include <limits>
+
+#include "raytracer/random.hpp"
 
 namespace raytracer {
 namespace {
@@ -81,6 +85,29 @@ void Quad::SetBoundingBox() {
     const double max_z = std::max({p0.z(), p1.z(), p2.z(), p3.z()}) + kPadding;
 
     bbox_ = Aabb(Point3(min_x, min_y, min_z), Point3(max_x, max_y, max_z));
+}
+
+double Quad::PdfValue(const Point3& origin, const Vec3& direction) const {
+    HitRecord record;
+    std::mt19937 dummy_generator(0);
+    if (!Hit(Ray(origin, direction), 0.001, std::numeric_limits<double>::infinity(), record, dummy_generator)) {
+        return 0.0;
+    }
+
+    const double distance_squared = record.t * record.t * direction.length_squared();
+    const double cosine = std::fabs(Dot(direction, record.normal) / direction.length());
+    if (cosine < kEpsilon) {
+        return 0.0;
+    }
+
+    return distance_squared / (cosine * area_);
+}
+
+Vec3 Quad::Random(const Point3& origin, std::mt19937& generator) const {
+    const double r1 = RandomDouble(generator);
+    const double r2 = RandomDouble(generator);
+    const Point3 random_point = q_ + r1 * u_ + r2 * v_;
+    return random_point - origin;
 }
 
 Box::Box(const Point3& min_point, const Point3& max_point, std::shared_ptr<Material> material)

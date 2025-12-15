@@ -1,7 +1,7 @@
 /*
- * 설명: 텍스처가 적용된 defocus blur와 motion blur 장면을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
- * 버전: v0.7.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md, design/renderer/v0.7.0-textures.md
+ * 설명: Cornell Box Quad/박스/광원을 BVH로 가속해 PPM(P3) 규격에 맞춰 렌더링한다.
+ * 버전: v0.8.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -17,10 +17,10 @@
 #include "raytracer/camera.hpp"
 #include "raytracer/hittable_list.hpp"
 #include "raytracer/material.hpp"
+#include "raytracer/quad.hpp"
 #include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
-#include "raytracer/sphere.hpp"
-#include "raytracer/texture.hpp"
+#include "raytracer/transform.hpp"
 #include "raytracer/vec3.hpp"
 
 namespace raytracer {
@@ -39,18 +39,20 @@ Color RayColor(const Ray& r, int depth, const Hittable& world, std::mt19937& gen
     }
 
     HitRecord record;
-    if (world.Hit(r, 0.001, std::numeric_limits<double>::infinity(), record)) {
-        Ray scattered;
-        Color attenuation;
-        if (record.material && record.material->Scatter(r, record, attenuation, scattered, generator)) {
-            return attenuation * RayColor(scattered, depth - 1, world, generator);
-        }
+    if (!world.Hit(r, 0.001, std::numeric_limits<double>::infinity(), record)) {
         return Color(0.0, 0.0, 0.0);
     }
 
-    const Vec3 unit_direction = UnitVector(r.direction());
-    const double t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
+    Ray scattered;
+    Color attenuation;
+    const Color emitted = (record.material && record.front_face) ? record.material->Emitted(record.u, record.v, record.p)
+                                                                 : Color(0.0, 0.0, 0.0);
+
+    if (record.material && record.material->Scatter(r, record, attenuation, scattered, generator)) {
+        return emitted + attenuation * RayColor(scattered, depth - 1, world, generator);
+    }
+
+    return emitted;
 }
 
 void WriteColor(std::ostringstream& output, const Color& pixel_color) {
@@ -61,21 +63,30 @@ void WriteColor(std::ostringstream& output, const Color& pixel_color) {
     output << ir << ' ' << ig << ' ' << ib << "\n";
 }
 
-HittableList BuildScene() {
+HittableList BuildCornellBox() {
     HittableList world;
 
-    const auto checker_texture = std::make_shared<CheckerTexture>(Color(0.8, 0.8, 0.0), Color(0.2, 0.3, 0.1), 3.0);
-    const auto noise_texture = std::make_shared<NoiseTexture>(2.0);
-    const auto ground_material = std::make_shared<Lambertian>(checker_texture);
-    const auto center_material = std::make_shared<Lambertian>(noise_texture);
-    const auto left_material = std::make_shared<Dielectric>(1.5);
-    const auto right_material = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0.0);
+    const auto red = std::make_shared<Lambertian>(Color(0.65, 0.05, 0.05));
+    const auto white = std::make_shared<Lambertian>(Color(0.73, 0.73, 0.73));
+    const auto green = std::make_shared<Lambertian>(Color(0.12, 0.45, 0.15));
+    const auto light = std::make_shared<DiffuseLight>(Color(15.0, 15.0, 15.0));
 
-    world.Add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, ground_material));
-    world.Add(std::make_shared<MovingSphere>(Point3(0.0, 0.0, -1.0), Point3(0.0, -0.25, -1.0), 0.0, 1.0, 0.5,
-                                            center_material));
-    world.Add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, left_material));
-    world.Add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, right_material));
+    world.Add(std::make_shared<Quad>(Point3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), Vec3(0.0, 555.0, 0.0), green));
+    world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 0.0), Vec3(0.0, 555.0, 0.0), Vec3(0.0, 0.0, 555.0), red));
+    world.Add(std::make_shared<Quad>(Point3(213.0, 554.0, 227.0), Vec3(130.0, 0.0, 0.0), Vec3(0.0, 0.0, 105.0), light));
+    world.Add(std::make_shared<Quad>(Point3(0.0, 555.0, 0.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), white));
+    world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 0.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 0.0, 555.0), white));
+    world.Add(std::make_shared<Quad>(Point3(0.0, 0.0, 555.0), Vec3(555.0, 0.0, 0.0), Vec3(0.0, 555.0, 0.0), white));
+
+    std::shared_ptr<Hittable> short_box = std::make_shared<Box>(Point3(0.0, 0.0, 0.0), Point3(165.0, 165.0, 165.0), white);
+    short_box = std::make_shared<RotateY>(short_box, -18.0);
+    short_box = std::make_shared<Translate>(short_box, Vec3(130.0, 0.0, 65.0));
+    world.Add(short_box);
+
+    std::shared_ptr<Hittable> tall_box = std::make_shared<Box>(Point3(0.0, 0.0, 0.0), Point3(165.0, 330.0, 165.0), white);
+    tall_box = std::make_shared<RotateY>(tall_box, 15.0);
+    tall_box = std::make_shared<Translate>(tall_box, Vec3(265.0, 0.0, 295.0));
+    world.Add(tall_box);
 
     return world;
 }
@@ -84,13 +95,13 @@ HittableList BuildScene() {
 
 std::string RenderMaterialImage(const RenderOptions& options) {
     const double aspect_ratio = static_cast<double>(options.width) / static_cast<double>(options.height);
-    const Point3 look_from(3.0, 3.0, 2.0);
-    const Point3 look_at(0.0, 0.0, -1.0);
+    const Point3 look_from(278.0, 278.0, -800.0);
+    const Point3 look_at(278.0, 278.0, 0.0);
     const Vec3 vup(0.0, 1.0, 0.0);
     const double focus_dist = (look_from - look_at).length();
     const Camera camera(look_from, look_at, vup, options.vertical_fov_degrees, aspect_ratio, options.aperture, focus_dist,
                        options.shutter_open_time, options.shutter_close_time);
-    HittableList world = BuildScene();
+    HittableList world = BuildCornellBox();
     const std::shared_ptr<BvhNode> bvh_tree =
         world.Objects().empty() ? nullptr : std::make_shared<BvhNode>(world, options.shutter_open_time, options.shutter_close_time);
     const Hittable& world_view = bvh_tree ? static_cast<const Hittable&>(*bvh_tree) : static_cast<const Hittable&>(world);

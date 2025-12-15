@@ -13,6 +13,8 @@ add_executable(raytracer
     src/ppm.cpp
     src/sphere.cpp
     src/bvh.cpp
+    src/quad.cpp
+    src/transform.cpp
 )
 
 target_include_directories(raytracer PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -36,8 +38,11 @@ add_executable(unit_tests
     tests/unit/material_scatter_test.cpp
     tests/unit/bvh_test.cpp
     tests/unit/texture_test.cpp
+    tests/unit/quad_test.cpp
     src/sphere.cpp
     src/bvh.cpp
+    src/quad.cpp
+    src/transform.cpp
 )
 
 target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -48,6 +53,8 @@ add_executable(integration_tests
     src/ppm.cpp
     src/sphere.cpp
     src/bvh.cpp
+    src/quad.cpp
+    src/transform.cpp
 )
 
 target_include_directories(integration_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -61,6 +68,7 @@ add_executable(bvh_benchmark
     tools/bvh_benchmark.cpp
     src/sphere.cpp
     src/bvh.cpp
+    src/quad.cpp
 )
 
 target_include_directories(bvh_benchmark PRIVATE ${CMAKE_SOURCE_DIR}/include)

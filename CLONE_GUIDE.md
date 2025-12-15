@@ -1,8 +1,8 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.7.0에서는 AABB와 BVH로 장면을 가속하며 체커/노이즈 텍스처가 적용된
-defocus blur 카메라 장면을 결정적으로 렌더링한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.8.0에서는 Quad/Box/area light로 구성된 Cornell Box를 BVH로 가속해 결정적으로
+렌더링하며 Translate/RotateY 변환과 발광 재질을 포함한다.
 
 > 주의: 렌더 산출물(PPM/PNG)과 벤치마크 결과는 **커밋하지 않는다**(gitignore).
 
@@ -27,7 +27,7 @@ ctest --test-dir build --output-on-failure
 
 ## 실행 (1줄)
 ```bash
-./build/raytracer --width 256 --height 256 --spp 10 --max-depth 10 --seed 1 > output.ppm
+./build/raytracer --width 256 --height 256 --spp 10 --max-depth 20 --seed 1 > output.ppm
 ```
 
 ## BVH 벤치마크

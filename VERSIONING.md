@@ -80,7 +80,7 @@ ray-tracer (C++17 CPU 레이트레이서) 버전 로드맵.
   - Noise/Checker 샘플링 단위 테스트
 
 ### v0.8.0 — Quad/Light/Transform + Cornell Box
-- 상태: ⬜
+- 상태: ✅
 - 목표:
   - Quad 프리미티브
   - 발광 재질(Area light)

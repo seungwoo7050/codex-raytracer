@@ -1,7 +1,7 @@
 /*
- * 설명: 표면 재질을 정의하고 텍스처 기반 반사/굴절 산란을 계산한다.
- * 버전: v0.7.0
- * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md
+ * 설명: 표면 재질을 정의하고 텍스처 기반 반사/굴절/발광 동작을 계산한다.
+ * 버전: v0.8.0
+ * 관련 문서: design/renderer/v0.5.0-blur.md, design/renderer/v0.7.0-textures.md, design/renderer/v0.8.0-cornell.md
  * 테스트: tests/unit/material_scatter_test.cpp, tests/unit/texture_test.cpp
  */
 #pragma once
@@ -23,6 +23,7 @@ public:
     virtual ~Material() = default;
     virtual bool Scatter(const Ray& r_in, const HitRecord& record, Color& attenuation, Ray& scattered,
                          std::mt19937& generator) const = 0;
+    virtual Color Emitted(double /*u*/, double /*v*/, const Point3& /*p*/) const { return Color(0.0, 0.0, 0.0); }
 };
 
 class Lambertian : public Material {
@@ -98,6 +99,21 @@ private:
     }
 
     double refraction_index_;
+};
+
+class DiffuseLight : public Material {
+public:
+    explicit DiffuseLight(const Color& emit) : emit_(emit) {}
+
+    bool Scatter(const Ray& /*r_in*/, const HitRecord& /*record*/, Color& /*attenuation*/, Ray& /*scattered*/,
+                 std::mt19937& /*generator*/) const override {
+        return false;
+    }
+
+    Color Emitted(double /*u*/, double /*v*/, const Point3& /*p*/) const override { return emit_; }
+
+private:
+    Color emit_;
 };
 
 }  // namespace raytracer

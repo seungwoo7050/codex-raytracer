@@ -1,7 +1,7 @@
 /*
- * 설명: CLI 인자를 해석해 defocus blur, motion blur, BVH 가속이 적용된 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
- * 버전: v0.6.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.6.0-bvh.md
+ * 설명: CLI 인자를 해석해 Cornell Box 기반 Quad/박스/광원 장면을 BVH로 가속해 결정적으로 렌더링한다.
+ * 버전: v0.8.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.8.0-cornell.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include <cstdint>
@@ -99,7 +99,7 @@ int ParseOptions(int argc, char* argv[], raytracer::RenderOptions& options, std:
     }
 
     if (options.samples_per_pixel < 1) {
-        std::cerr << "오류: --spp 값은 1 이상 정수여야 다." << std::endl;
+        std::cerr << "오류: --spp 값은 1 이상 정수여야 한다." << std::endl;
         return 1;
     }
 

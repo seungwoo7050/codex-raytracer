@@ -1,11 +1,11 @@
 # design/protocol/contract.md
 
 ## 목적
-v0.4.0에서 외부와 맞닿는 인터페이스를 고정한다. Lambertian/Metal/Dielectric 재질, 재귀 rayColor, 감마 보정, CLI 규약, PPM 출력 형식, 결정성 규칙을 본 문서에 정의하며 구현과 테스트는 본 규약을 기준으로 한다.
+v0.5.0에서 외부와 맞닿는 인터페이스를 고정한다. Lambertian/Metal/Dielectric 재질, 재귀 rayColor, 감마 보정에 더해 defocus blur(조리개)와 moving sphere motion blur를 반영한 CLI 렌더러의 규약을 정의하며 구현과 테스트는 본 규약을 따른다.
 
 ## 대상 버전
-- 버전: v0.4.0
-- 범위: 다중 구 장면을 Lambertian/Metal/Dielectric로 렌더링하는 CLI (카메라 FOV/종횡비 + 멀티샘플링 + 재귀 반사/굴절 + 감마 보정)
+- 버전: v0.5.0
+- 범위: defocus blur 카메라와 moving sphere를 포함한 다중 구 장면을 Lambertian/Metal/Dielectric로 렌더링하는 CLI (카메라 FOV/종횡비 + 멀티샘플링 + 재귀 반사/굴절 + 감마 보정)
 
 ## CLI 규약
 - 실행 파일: `raytracer`
@@ -20,32 +20,43 @@ v0.4.0에서 외부와 맞닿는 인터페이스를 고정한다. Lambertian/Met
 - 잘못된 옵션이나 값(예: 누락된 파라미터, 허용 범위 밖 값) 입력 시:
   - 표준 오류로 한국어 오류 메시지를 한 줄 출력하고 종료 코드 1을 반환한다.
   - 어떠한 부분 출력도 생성하지 않는다.
+- 조리개(aperture)와 셔터 시간은 코드에 고정된 값으로 사용하며 CLI 옵션으로 제공하지 않는다.
 
 ## 카메라 및 샘플링 규약
-- 카메라
-  - 원점(origin): `(0, 0, 0)`
-  - 초점 거리(focal length): `1.0`
-  - 수직 시야각(vertical FOV): `90도`
+- 카메라 배치
+  - 시점(lookfrom): `(3, 3, 2)`
+  - 목표(lookat): `(0, 0, -1)`
+  - 업 벡터(vup): `(0, 1, 0)`
+  - 수직 시야각(vertical FOV): `20도`
   - 종횡비(aspect ratio): `width / height`
-  - 뷰포트 높이: `2 * tan(FOV/2)`
-  - 뷰포트 너비: `aspect_ratio * viewport_height`
-  - 수평 벡터: `(viewport_width, 0, 0)`
-  - 수직 벡터: `(0, viewport_height, 0)`
-  - 좌하단 코너: `origin - horizontal/2 - vertical/2 - (0, 0, focal_length)`
+  - 포커스 거리: `|lookfrom - lookat|`
+  - 조리개(aperture): `0.2` → 렌즈 반지름 `lens_radius = 0.1`
+- defocus blur 계산
+  - 직교 기저: `w = UnitVector(lookfrom - lookat)`, `u = UnitVector(Cross(vup, w))`, `v = Cross(w, u)`
+  - 뷰포트 높이/너비: `viewport_height = 2 * tan(FOV/2)`, `viewport_width = aspect_ratio * viewport_height`
+  - 수평/수직 벡터: `horizontal = focus_distance * viewport_width * u`, `vertical = focus_distance * viewport_height * v`
+  - 좌하단 코너: `lower_left_corner = lookfrom - horizontal/2 - vertical/2 - focus_distance * w`
+  - 렌즈 샘플: `rd = lens_radius * RandomInUnitDisk(generator)`
+  - 렌즈 오프셋: `offset = u * rd.x + v * rd.y`
+  - 레이 원점/방향: `ray_origin = lookfrom + offset`,
+    `ray_direction = lower_left_corner + u_norm * horizontal + v_norm * vertical - lookfrom - offset`
+- 셔터 시간(모션 블러)
+  - 셔터 오픈/클로즈: `[time0, time1) = [0.0, 1.0)`
+  - 각 카메라 샘플은 `RandomDouble(generator, time0, time1)`로 균일 샘플된 시간을 포함한다.
+  - 산란 레이는 입력 레이의 시간을 그대로 사용한다.
 - 픽셀 좌표계
   - 입력 픽셀 좌표 `(x, y)`에서 `y=0`은 상단 행을 의미한다.
 - 멀티샘플링
   - 픽셀당 `samples_per_pixel`번 랜덤 샘플링한다.
   - 각 샘플에 대해 정규화 좌표를 계산한다.
-    - `u = (width == 1) ? 0.5 : (x + rand01) / (width - 1)`
-    - `v = (height == 1) ? 0.5 : (height - 1 - y + rand01) / (height - 1)`
+    - `u_norm = (width == 1) ? 0.5 : (x + rand01) / (width - 1)`
+    - `v_norm = (height == 1) ? 0.5 : (height - 1 - y + rand01) / (height - 1)`
     - `rand01`은 `[0, 1)` 범위 균일 분포 난수다.
-  - 레이 방향: `dir = lower_left_corner + u * horizontal + v * vertical - origin`
-  - 색상 샘플을 모두 합산한 뒤 `samples_per_pixel`로 나누어 평균을 만든다.
+  - defocus와 시간 샘플을 포함한 레이를 생성하고 모든 색상 샘플을 합산한 뒤 `samples_per_pixel`로 나누어 평균을 만든다.
 
 ## RNG 및 결정성 규칙
 - 난수 생성: `std::mt19937` + `std::uniform_real_distribution<double>(0.0, 1.0)`을 사용한다.
-- 재질 산란에서도 동일 분포를 사용하며, 모든 난수는 하나의 생성기 인스턴스에서 직렬화되어 소비된다.
+- 재질 산란, defocus 렌즈 좌표, 셔터 시간 샘플 모두 동일 생성기 인스턴스에서 직렬화되어 소비된다.
 - 초기 시드: `--seed` 값으로 생성자를 초기화한다.
 - 동일한 입력(옵션, 시드)에서는 항상 동일한 PPM 문자열을 생성한다.
 - 테스트는 동일 시드 2회 실행 결과 문자열을 비교한다.
@@ -56,7 +67,7 @@ v0.4.0에서 외부와 맞닿는 인터페이스를 고정한다. Lambertian/Met
 - 미히트 시: 배경색은 기존 그라디언트 `c = (1.0 - t) * (1,1,1) + t * (0.5, 0.7, 1.0)`을 사용한다(단, `t = 0.5 * (unit_dir.y + 1.0)`).
 
 ## 재질 규약
-- 공통: `Scatter`는 입력 레이, 교차 정보, RNG를 받아 산란 레이와 감쇠 색을 결정한다.
+- 공통: `Scatter`는 입력 레이, 교차 정보, RNG를 받아 산란 레이와 감쇠 색을 결정한다. 산란 레이는 입력 레이의 시간값을 그대로 유지한다.
 - Lambertian(diffuse):
   - 감쇠: 고정 알베도 색상.
   - 산란 방향: 법선 + 단위 구 내부 임의 벡터. 방향이 거의 0에 가까우면 법선을 사용한다.
@@ -83,10 +94,11 @@ v0.4.0에서 외부와 맞닿는 인터페이스를 고정한다. Lambertian/Met
 - 색상 생성 규칙(결정적):
   - 장면: 고정된 4개 구를 사용한다.
     - `Sphere(center=(0, -100.5, -1), radius=100, material=Lambertian(albedo=(0.8, 0.8, 0.0)))`
-    - `Sphere(center=(0, 0, -1), radius=0.5, material=Lambertian(albedo=(0.1, 0.2, 0.5)))`
+    - `MovingSphere(center0=(0, 0, -1), center1=(0, -0.25, -1), time0=0.0, time1=1.0, radius=0.5, material=Lambertian(albedo=(0.1, 0.2, 0.5)))`
     - `Sphere(center=(-1, 0, -1), radius=0.5, material=Dielectric(refraction_index=1.5))`
     - `Sphere(center=(1, 0, -1), radius=0.5, material=Metal(albedo=(0.8, 0.6, 0.2), fuzz=0.0))`
-  - 교차 테스트: 각 구는 기존 판별식 기반 2차 방정식으로 교차를 판정하며, `t_min=0.001`, `t_max=+∞`를 사용한다.
+  - MovingSphere 위치는 `center(time) = center0 + ((time - time0)/(time1 - time0)) * (center1 - center0)`로 선형 보간한다.
+  - 교차 테스트: 각 구는 판별식 기반 2차 방정식으로 교차를 판정하며, `t_min=0.001`, `t_max=+∞`를 사용한다.
   - 표면 방향: `front_face`는 레이 방향과 법선 내적 부호로 결정하며, 내부에서 나가는 경우 법선을 뒤집는다.
   - 배경색: `unit_dir = dir / |dir|`, `t = 0.5 * (unit_dir.y + 1.0)`, `background = (1.0 - t) * (1,1,1) + t * (0.5, 0.7, 1.0)`
   - rayColor: 앞서 정의한 재질 규약과 재귀 규칙을 따른다.

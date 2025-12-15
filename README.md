@@ -1,6 +1,6 @@
 # ray-tracer (C++17)
 
-ASCII PPM(P3) 이미지를 출력하는 교육용 CPU 레이트레이서다. v0.4.0에서는 멀티샘플링 카메라에 Lambertian/Metal/Dielectric 재질, rayColor 재귀, 감마 보정을 적용해 4개 구 장면을 결정적으로 렌더링하며, CLI 규약과 출력 형식은 `design/protocol/contract.md`를 따른다.
+ASCII PPM(P3) 이미지를 출력하는 교육용 CPU 레이트레이서다. v0.5.0에서는 조리개 기반 defocus blur 카메라와 셔터 시간으로 모션 블러가 적용된 moving sphere를 포함해 멀티샘플링 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링하며, CLI 규약과 출력 형식은 `design/protocol/contract.md`를 따른다.
 
 ## 빠른 시작
 - 빌드: `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`

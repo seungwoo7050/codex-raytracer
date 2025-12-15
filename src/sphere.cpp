@@ -1,7 +1,7 @@
 /*
- * 설명: 구와 레이의 교차를 계산한다.
- * 버전: v0.4.0
- * 관련 문서: design/renderer/v0.4.0-materials.md
+ * 설명: 고정 구와 이동 구의 레이 교차를 계산한다.
+ * 버전: v0.5.0
+ * 관련 문서: design/renderer/v0.5.0-blur.md
  * 테스트: tests/unit/sphere_test.cpp
  */
 #include "raytracer/sphere.hpp"
@@ -34,6 +34,47 @@ bool Sphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) co
     record.t = root;
     record.p = r.At(record.t);
     const Vec3 outward_normal = (record.p - center_) / radius_;
+    record.SetFaceNormal(r, outward_normal);
+    record.material = material_;
+
+    return true;
+}
+
+Point3 MovingSphere::Center(double time) const {
+    const double time_span = time_end_ - time_start_;
+    if (time_span == 0.0) {
+        return center_start_;
+    }
+
+    const double time_ratio = (time - time_start_) / time_span;
+    return center_start_ + time_ratio * (center_end_ - center_start_);
+}
+
+bool MovingSphere::Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const {
+    const Point3 center = Center(r.time());
+    const Vec3 oc = r.origin() - center;
+    const double a = r.direction().length_squared();
+    const double half_b = Dot(oc, r.direction());
+    const double c = oc.length_squared() - radius_ * radius_;
+
+    const double discriminant = half_b * half_b - a * c;
+    if (discriminant < 0) {
+        return false;
+    }
+
+    const double sqrt_d = std::sqrt(discriminant);
+
+    double root = (-half_b - sqrt_d) / a;
+    if (root < t_min || root > t_max) {
+        root = (-half_b + sqrt_d) / a;
+        if (root < t_min || root > t_max) {
+            return false;
+        }
+    }
+
+    record.t = root;
+    record.p = r.At(record.t);
+    const Vec3 outward_normal = (record.p - center) / radius_;
     record.SetFaceNormal(r, outward_normal);
     record.material = material_;
 

@@ -12,6 +12,7 @@ add_executable(raytracer
     src/main.cpp
     src/ppm.cpp
     src/sphere.cpp
+    src/bvh.cpp
 )
 
 target_include_directories(raytracer PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -33,22 +34,33 @@ add_executable(unit_tests
     tests/unit/vec3_test.cpp
     tests/unit/sphere_test.cpp
     tests/unit/material_scatter_test.cpp
+    tests/unit/bvh_test.cpp
     src/sphere.cpp
+    src/bvh.cpp
 )
 
 target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(unit_tests PRIVATE GTest::gtest_main)
 
-gtest_discover_tests(unit_tests)
-
 add_executable(integration_tests
     tests/integration/ppm_integration_test.cpp
     src/ppm.cpp
     src/sphere.cpp
+    src/bvh.cpp
 )
 
 target_include_directories(integration_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(integration_tests PRIVATE GTest::gtest_main)
 
+gtest_discover_tests(unit_tests)
 gtest_discover_tests(integration_tests)
+
+add_executable(bvh_benchmark
+    tools/bvh_benchmark.cpp
+    src/sphere.cpp
+    src/bvh.cpp
+)
+
+target_include_directories(bvh_benchmark PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_compile_options(bvh_benchmark PRIVATE -Wall -Wextra -pedantic)

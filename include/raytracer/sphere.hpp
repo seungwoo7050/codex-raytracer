@@ -1,13 +1,14 @@
 /*
- * 설명: 고정 구와 시간에 따라 이동하는 구의 레이 교차를 계산한다.
- * 버전: v0.5.0
- * 관련 문서: design/renderer/v0.5.0-blur.md
- * 테스트: tests/unit/sphere_test.cpp
+ * 설명: 고정 구와 시간에 따라 이동하는 구의 레이 교차 및 경계 상자를 계산한다.
+ * 버전: v0.6.0
+ * 관련 문서: design/renderer/v0.6.0-bvh.md
+ * 테스트: tests/unit/sphere_test.cpp, tests/unit/bvh_test.cpp
  */
 #pragma once
 
 #include <memory>
 
+#include "raytracer/aabb.hpp"
 #include "raytracer/hittable.hpp"
 
 namespace raytracer {
@@ -18,6 +19,7 @@ public:
         : center_(center), radius_(radius), material_(std::move(material)) {}
 
     bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const override;
+    bool BoundingBox(double time0, double time1, Aabb& output_box) const override;
 
 private:
     Point3 center_;
@@ -37,6 +39,7 @@ public:
           material_(std::move(material)) {}
 
     bool Hit(const Ray& r, double t_min, double t_max, HitRecord& record) const override;
+    bool BoundingBox(double time0, double time1, Aabb& output_box) const override;
 
 private:
     Point3 Center(double time) const;

@@ -1,7 +1,7 @@
 /*
- * 설명: PPM(P3) 규격에 맞춰 Lambertian/Metal/Dielectric 장면을 렌더링한다.
- * 버전: v0.4.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.4.0-materials.md
+ * 설명: defocus blur와 motion blur가 적용된 Lambertian/Metal/Dielectric 장면을 PPM(P3) 규격에 맞춰 렌더링한다.
+ * 버전: v0.5.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.5.0-blur.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include "raytracer/ppm.hpp"
@@ -16,6 +16,7 @@
 #include "raytracer/camera.hpp"
 #include "raytracer/hittable_list.hpp"
 #include "raytracer/material.hpp"
+#include "raytracer/random.hpp"
 #include "raytracer/ray.hpp"
 #include "raytracer/sphere.hpp"
 #include "raytracer/vec3.hpp"
@@ -67,7 +68,8 @@ HittableList BuildScene() {
     const auto right_material = std::make_shared<Metal>(Color(0.8, 0.6, 0.2), 0.0);
 
     world.Add(std::make_shared<Sphere>(Point3(0.0, -100.5, -1.0), 100.0, ground_material));
-    world.Add(std::make_shared<Sphere>(Point3(0.0, 0.0, -1.0), 0.5, center_material));
+    world.Add(std::make_shared<MovingSphere>(Point3(0.0, 0.0, -1.0), Point3(0.0, -0.25, -1.0), 0.0, 1.0, 0.5,
+                                            center_material));
     world.Add(std::make_shared<Sphere>(Point3(-1.0, 0.0, -1.0), 0.5, left_material));
     world.Add(std::make_shared<Sphere>(Point3(1.0, 0.0, -1.0), 0.5, right_material));
 
@@ -78,10 +80,14 @@ HittableList BuildScene() {
 
 std::string RenderMaterialImage(const RenderOptions& options) {
     const double aspect_ratio = static_cast<double>(options.width) / static_cast<double>(options.height);
-    const Camera camera(options.vertical_fov_degrees, aspect_ratio);
+    const Point3 look_from(3.0, 3.0, 2.0);
+    const Point3 look_at(0.0, 0.0, -1.0);
+    const Vec3 vup(0.0, 1.0, 0.0);
+    const double focus_dist = (look_from - look_at).length();
+    const Camera camera(look_from, look_at, vup, options.vertical_fov_degrees, aspect_ratio, options.aperture, focus_dist,
+                       options.shutter_open_time, options.shutter_close_time);
     HittableList world = BuildScene();
     std::mt19937 generator(options.seed);
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
     std::ostringstream output;
     output << "P3\n";
@@ -94,14 +100,14 @@ std::string RenderMaterialImage(const RenderOptions& options) {
             for (int sample = 0; sample < options.samples_per_pixel; ++sample) {
                 const double u = (options.width == 1)
                                      ? 0.5
-                                     : (static_cast<double>(x) + distribution(generator)) /
+                                     : (static_cast<double>(x) + RandomDouble(generator)) /
                                            (static_cast<double>(options.width) - 1.0);
                 const double v = (options.height == 1)
                                      ? 0.5
-                                     : (static_cast<double>(options.height - 1 - y) + distribution(generator)) /
+                                     : (static_cast<double>(options.height - 1 - y) + RandomDouble(generator)) /
                                            (static_cast<double>(options.height) - 1.0);
 
-                const Ray r = camera.GetRay(u, v);
+                const Ray r = camera.GetRay(u, v, generator);
                 pixel_color += RayColor(r, options.max_depth, world, generator);
             }
 

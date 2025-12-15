@@ -1,7 +1,7 @@
 /*
- * 설명: CLI 인자를 해석해 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
- * 버전: v0.4.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.4.0-materials.md
+ * 설명: CLI 인자를 해석해 defocus blur와 motion blur가 적용된 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
+ * 버전: v0.5.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.5.0-blur.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
 #include <cstdint>

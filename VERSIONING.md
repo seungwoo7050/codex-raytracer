@@ -56,7 +56,7 @@ ray-tracer (C++17 CPU 레이트레이서) 버전 로드맵.
   - 재질 산란 단위 테스트 최소 2개
 
 ### v0.5.0 — Defocus blur + Motion blur
-- 상태: ⬜
+- 상태: 🟨
 - 목표:
   - 피사계 심도(defocus/aperture)
   - moving sphere 기반 motion blur

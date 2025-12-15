@@ -1,7 +1,7 @@
 /*
  * 설명: 결정적 랜덤 값을 생성하고 벡터 샘플링 유틸리티를 제공한다.
- * 버전: v0.4.0
- * 관련 문서: design/renderer/v0.4.0-materials.md
+ * 버전: v0.5.0
+ * 관련 문서: design/renderer/v0.5.0-blur.md
  * 테스트: tests/unit/material_scatter_test.cpp
  */
 #pragma once
@@ -28,5 +28,14 @@ inline Vec3 RandomInUnitSphere(std::mt19937& generator) {
 }
 
 inline Vec3 RandomUnitVector(std::mt19937& generator) { return UnitVector(RandomInUnitSphere(generator)); }
+
+inline Vec3 RandomInUnitDisk(std::mt19937& generator) {
+    while (true) {
+        const Vec3 candidate(RandomDouble(generator, -1.0, 1.0), RandomDouble(generator, -1.0, 1.0), 0.0);
+        if (candidate.length_squared() < 1.0) {
+            return candidate;
+        }
+    }
+}
 
 }  // namespace raytracer

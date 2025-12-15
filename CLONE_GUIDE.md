@@ -1,7 +1,7 @@
 # CLONE_GUIDE.md
 
 ## 개요
-`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.4.0에서는 Lambertian/Metal/Dielectric 재질과 재귀 rayColor, 감마 보정을 적용한 4개 구 장면을 결정적으로 렌더링한다.
+`ray-tracer`를 로컬에서 재현하기 위한 최소 절차를 요약한다. v0.5.0에서는 조리개 기반 defocus blur 카메라와 셔터 시간에 따라 움직이는 구를 포함한 Lambertian/Metal/Dielectric 장면을 결정적으로 렌더링한다.
 
 > 주의: 렌더 산출물(PPM/PNG)은 **커밋하지 않는다**(gitignore).
 

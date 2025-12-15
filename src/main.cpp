@@ -1,11 +1,13 @@
 /*
  * 설명: CLI 인자를 해석해 구 노멀 기반 PPM을 결정적으로 생성하고 출력한다.
- * 버전: v0.2.0
- * 관련 문서: design/protocol/contract.md, design/renderer/v0.2.0-sphere-hit.md
+ * 버전: v0.3.0
+ * 관련 문서: design/protocol/contract.md, design/renderer/v0.3.0-camera-sampling.md
  * 테스트: tests/integration/ppm_integration_test.cpp
  */
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -47,6 +49,33 @@ int ParseOptions(int argc, char* argv[], raytracer::RenderOptions& options, std:
                 return 1;
             }
             output_path = argv[++i];
+        } else if (arg == "--spp") {
+            if (!HasNext(argc, i)) {
+                std::cerr << "오류: --spp 옵션에 값이 필요하다." << std::endl;
+                return 1;
+            }
+            try {
+                options.samples_per_pixel = std::stoi(argv[++i]);
+            } catch (const std::exception&) {
+                std::cerr << "오류: --spp 값은 정수여야 한다." << std::endl;
+                return 1;
+            }
+        } else if (arg == "--seed") {
+            if (!HasNext(argc, i)) {
+                std::cerr << "오류: --seed 옵션에 값이 필요하다." << std::endl;
+                return 1;
+            }
+            try {
+                const unsigned long parsed = std::stoul(argv[++i]);
+                if (parsed > std::numeric_limits<std::uint32_t>::max()) {
+                    std::cerr << "오류: --seed 값이 32비트 범위를 초과했다." << std::endl;
+                    return 1;
+                }
+                options.seed = static_cast<std::uint32_t>(parsed);
+            } catch (const std::exception&) {
+                std::cerr << "오류: --seed 값은 0 이상 정수여야 한다." << std::endl;
+                return 1;
+            }
         } else {
             std::cerr << "오류: 지원하지 않는 옵션." << std::endl;
             return 1;
@@ -55,6 +84,11 @@ int ParseOptions(int argc, char* argv[], raytracer::RenderOptions& options, std:
 
     if (options.width < 1 || options.height < 1) {
         std::cerr << "오류: 해상도는 1 이상 정수만 허용한다." << std::endl;
+        return 1;
+    }
+
+    if (options.samples_per_pixel < 1) {
+        std::cerr << "오류: --spp 값은 1 이상 정수여야 한다." << std::endl;
         return 1;
     }
 
